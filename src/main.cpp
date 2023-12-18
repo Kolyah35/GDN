@@ -9,15 +9,14 @@ using namespace geode::prelude;
 CCDrawNode* drawbox;
 bool aimode = false;
 
-class $modify(EditorUI) {
+class $modify(AIEditor, EditorUI) {
 	bool init(LevelEditorLayer* editor) {
 		if(!EditorUI::init(editor)) return false;
 
 		auto menu = (CCMenu*)this->getChildren()->objectAtIndex(9);
-		auto checkbox = CCMenuItemToggler::create(CCSprite::create("GJ_checkOff_001.png"), CCSprite::create("GJ_checkOn_001.png"), this, SEL_MenuHandler(&onAI));
-		checkbox->toggle(false);
+		auto aibtn = CCMenuItemSpriteExtra::create(CCSprite::createWithSpriteFrameName("GJ_deSelBtn2_001.png"), this, SEL_MenuHandler(&AIEditor::onAI));
 
-		menu->addChild(checkbox);
+		menu->addChild(aibtn);
 		menu->alignItemsHorizontallyWithPadding(48);
 
 		return true;
