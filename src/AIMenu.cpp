@@ -56,7 +56,3 @@ void AIMenu::onClose(cocos2d::CCObject*) {
     this->setKeyboardEnabled(false);
     this->removeFromParentAndCleanup(true);
 }
-
-void AIMenu::setup() {
-
-}

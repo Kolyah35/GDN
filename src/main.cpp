@@ -11,6 +11,35 @@ using namespace geode::prelude;
 CCDrawNode* drawbox;
 bool aimode = false;
 
+
+void AIMenu::setup() {
+	this->setZOrder(101);
+
+	auto menu = CCMenu::create();
+
+    auto winSize = CCDirector::sharedDirector()->getWinSize();
+	auto selectBtn = ButtonSprite::create("Select area");
+	selectBtn->setPosition(menu->convertToNodeSpace({winSize.width / 2, 235}));
+	menu->addChild(selectBtn);
+
+	auto textInputBG = CCScale9Sprite::create("square02_001.png");
+	textInputBG->setContentSize({200, 100});
+	textInputBG->setPosition(menu->convertToNodeSpace(winSize / 2));
+	textInputBG->setOpacity(125);
+	menu->addChild(textInputBG);
+
+	auto textInput = CCTextInputNode::create(200, 100, "Your prompt...", "chatFont.fnt");
+	textInput->setPosition(menu->convertToNodeSpace(winSize / 2));
+	menu->addChild(textInput);
+
+	auto sendBtn = ButtonSprite::create("Send");
+	sendBtn->setPosition(menu->convertToNodeSpace({winSize.width / 2, 85}));
+	menu->addChild(sendBtn);
+
+	menu->setPosition(winSize / 2);
+	this->m_mainLayer->addChild(menu);
+}
+
 class $modify(AIEditor, EditorUI) {
 	bool init(LevelEditorLayer* editor) {
 		if(!EditorUI::init(editor)) return false;
@@ -25,9 +54,8 @@ class $modify(AIEditor, EditorUI) {
 	}
 
 	void onAI(CCObject* obj) {
-		auto aimenu = AIMenu::create(100, 100);
-
-		this->addChild(aimenu);
+		auto aimenu = AIMenu::create(300, 200);
+		this->getParent()->addChild(aimenu);
 	}
 };
 
