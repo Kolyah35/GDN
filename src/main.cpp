@@ -2,6 +2,8 @@
 #include <Geode/modify/EditorUI.hpp>
 #include <Geode/modify/LevelEditorLayer.hpp>
 
+#include "AIMenu.hpp"
+
 #define ALIGN(var) ((int)##var % 30)
 
 using namespace geode::prelude;
@@ -23,7 +25,9 @@ class $modify(AIEditor, EditorUI) {
 	}
 
 	void onAI(CCObject* obj) {
-		return;
+		auto aimenu = AIMenu::create(100, 100);
+
+		this->addChild(aimenu);
 	}
 };
 
