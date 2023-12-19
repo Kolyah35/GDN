@@ -8,38 +8,6 @@
 
 using namespace geode::prelude;
 
-CCDrawNode* drawbox;
-bool aimode = false;
-
-
-void AIMenu::setup() {
-	this->setZOrder(101);
-
-	auto menu = CCMenu::create();
-
-    auto winSize = CCDirector::sharedDirector()->getWinSize();
-	auto selectBtn = ButtonSprite::create("Select area");
-	selectBtn->setPosition(menu->convertToNodeSpace({winSize.width / 2, 235}));
-	menu->addChild(selectBtn);
-
-	auto textInputBG = CCScale9Sprite::create("square02_001.png");
-	textInputBG->setContentSize({200, 100});
-	textInputBG->setPosition(menu->convertToNodeSpace(winSize / 2));
-	textInputBG->setOpacity(125);
-	menu->addChild(textInputBG);
-
-	auto textInput = CCTextInputNode::create(200, 100, "Your prompt...", "chatFont.fnt");
-	textInput->setPosition(menu->convertToNodeSpace(winSize / 2));
-	menu->addChild(textInput);
-
-	auto sendBtn = ButtonSprite::create("Send");
-	sendBtn->setPosition(menu->convertToNodeSpace({winSize.width / 2, 85}));
-	menu->addChild(sendBtn);
-
-	menu->setPosition(winSize / 2);
-	this->m_mainLayer->addChild(menu);
-}
-
 class $modify(AIEditor, EditorUI) {
 	bool init(LevelEditorLayer* editor) {
 		if(!EditorUI::init(editor)) return false;
@@ -50,12 +18,20 @@ class $modify(AIEditor, EditorUI) {
 		menu->addChild(aibtn);
 		menu->alignItemsHorizontallyWithPadding(48);
 
+		AIMenu::m_invisibleArray = cocos2d::CCArray::create();
+    	AIMenu::m_invisibleArray->retain();
+
 		return true;
 	}
 
 	void onAI(CCObject* obj) {
-		auto aimenu = AIMenu::create(300, 200);
-		this->getParent()->addChild(aimenu);
+		auto aiMenu = AIMenu::create(300, 200);
+		this->getParent()->addChild(aiMenu);
+	}
+
+	void onPause(CCObject* sender) {
+		if(!AIMenu::m_aiMode)
+			return EditorUI::onPause(sender);
 	}
 };
 
@@ -63,15 +39,16 @@ class $modify(LevelEditorLayer){
 	bool init(GJGameLevel* level) {
 		if(!LevelEditorLayer::init(level)) return false;
 
-		drawbox = CCDrawNode::create();
-		this->m_drawGridLayer->addChild(drawbox);
+		AIMenu::m_drawbox = CCDrawNode::create();
+		AIMenu::m_drawbox->setZOrder(1000);
+		this->m_objectLayer->addChild(AIMenu::m_drawbox);
 
 		return true;
 	}
 
 	CCArray* objectsInRect(cocos2d::CCRect rect, bool ignoreLayer) {
-		if(aimode) {
-			drawbox->clear();
+		if(AIMenu::m_aiMode) {
+			AIMenu::m_drawbox->clear();
 
 			rect.origin.x = floorf(rect.origin.x - ALIGN(rect.origin.x));
 			rect.origin.y = floorf(rect.origin.y - ALIGN(rect.origin.y));
@@ -85,7 +62,7 @@ class $modify(LevelEditorLayer){
 				{rect.origin.x, rect.origin.y + rect.size.height}
 			};
 
-			drawbox->drawPolygon(rectangle, 4, {1.0f, 1.0f, 1.0f, 0.0f}, 1.0f, {1.0f, 1.0f, 0.0f, 1.0f});
+			AIMenu::m_drawbox->drawPolygon(rectangle, 4, {1.0f, 1.0f, 1.0f, 0.0f}, 1.0f, {1.0f, 1.0f, 0.0f, 1.0f});
 			
 			return CCArray::create();
 		} else {
