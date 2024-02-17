@@ -12,11 +12,14 @@ class $modify(AIEditor, EditorUI) {
 	bool init(LevelEditorLayer* editor) {
 		if(!EditorUI::init(editor)) return false;
 
-		auto menu = (CCMenu*)this->getChildren()->objectAtIndex(9);
+		// auto menu = (CCMenu*)this->getChildren()->objectAtIndex(24);
+		auto menu = CCMenu::create();
 		auto aibtn = CCMenuItemSpriteExtra::create(CCSprite::createWithSpriteFrameName("GJ_deSelBtn2_001.png"), this, SEL_MenuHandler(&AIEditor::onAI));
+		aibtn->setPosition({-110, 150});
 
 		menu->addChild(aibtn);
-		menu->alignItemsHorizontallyWithPadding(48);
+		this->addChild(menu);
+		// menu->alignItemsHorizontallyWithPadding(48);
 
 		AIMenu::m_invisibleArray = cocos2d::CCArray::create();
     	AIMenu::m_invisibleArray->retain();
@@ -36,8 +39,8 @@ class $modify(AIEditor, EditorUI) {
 };
 
 class $modify(LevelEditorLayer){
-	bool init(GJGameLevel* level) {
-		if(!LevelEditorLayer::init(level)) return false;
+	bool init(GJGameLevel* level, bool p1) {
+		if(!LevelEditorLayer::init(level, p1)) return false;
 
 		AIMenu::m_drawbox = CCDrawNode::create();
 		AIMenu::m_drawbox->setZOrder(1000);
@@ -47,7 +50,7 @@ class $modify(LevelEditorLayer){
 	}
 
 	CCArray* objectsInRect(cocos2d::CCRect rect, bool ignoreLayer) {
-		if(AIMenu::m_aiMode) {
+		if(AIMenu::m_aiMode && !AIMenu::m_aiSelectObjects) {
 			AIMenu::m_drawbox->clear();
 
 			rect.origin.x = floorf(rect.origin.x - ALIGN(rect.origin.x));
@@ -62,10 +65,13 @@ class $modify(LevelEditorLayer){
 				{rect.origin.x, rect.origin.y + rect.size.height}
 			};
 
-			AIMenu::m_drawbox->drawPolygon(rectangle, 4, {1.0f, 1.0f, 1.0f, 0.0f}, 1.0f, {1.0f, 1.0f, 0.0f, 1.0f});
+			AIMenu::m_drawbox->drawPolygon(rectangle, 4, {0.0f, 0.0f, 0.0f, 0.0f}, 1.0f, {1.0f, 1.0f, 0.0f, 1.0f});
+			AIMenu::m_selectedRect = rect;
+			AIMenu::m_ignoreLayer = ignoreLayer;
 			
 			return CCArray::create();
 		} else {
+			AIMenu::m_aiSelectObjects = false;
 			return LevelEditorLayer::objectsInRect(rect, ignoreLayer);
 		}
 	}

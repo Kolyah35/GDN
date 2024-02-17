@@ -1,0 +1,13 @@
+{
+    "blocks": [
+        {
+            "ID": 1,
+            "pos": [15, 15],
+            "color": [255, 255, 255],
+            "scale": 1.1, 
+            "scaleX": 1.1,
+            "scaleY": 1.1,
+            "rotation": 90
+        }
+    ]
+}

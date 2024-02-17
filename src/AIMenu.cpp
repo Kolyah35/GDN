@@ -1,5 +1,8 @@
 #include "AIMenu.hpp"
 #include <Geode/Geode.hpp>
+#include <rapidjson/document.h>
+
+#undef GetObject
 
 using namespace geode::prelude;
 
@@ -30,6 +33,9 @@ bool AIMenu::init(float w, float h, const char* spr) {
     this->m_buttonMenu = cocos2d::CCMenu::create();
     this->m_mainLayer->addChild(this->m_buttonMenu);
 
+    this->setKeypadEnabled(true);
+    this->setTouchEnabled(true);
+
     setup();
 
     auto closeSpr = cocos2d::CCSprite::createWithSpriteFrameName("GJ_closeBtn_001.png");
@@ -46,9 +52,6 @@ bool AIMenu::init(float w, float h, const char* spr) {
 
     closeBtn->setPosition(-w / 2, h / 2);
 
-    this->setKeypadEnabled(true);
-    this->setTouchEnabled(true);
-
     this->m_mainLayer->setScale(0.1f);
     this->m_mainLayer->runAction(cocos2d::CCEaseElasticOut::create(cocos2d::CCScaleTo::create(0.5f, 1.0), 0.6f));
 
@@ -56,8 +59,10 @@ bool AIMenu::init(float w, float h, const char* spr) {
 }
 
 void AIMenu::onClose(cocos2d::CCObject*) {
-    auto editorUI = (EditorUI*)this->getParent()->getChildByID("EditorUI");
+    auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
+    auto editorUI = (EditorUI*)levelEditorLayer->getChildren()->objectAtIndex(7);
     auto okBtn = editorUI->getChildByIDRecursive("kolyah35.gdn/okBtn");
+    auto gm = GameManager::sharedState();
 
     CCObject* obj;
     CCARRAY_FOREACH(m_invisibleArray, obj) {
@@ -65,14 +70,22 @@ void AIMenu::onClose(cocos2d::CCObject*) {
         node->setVisible(true);
     }
 
-    editorUI->m_swipeEnabled = m_swipeEnabled;
-    editorUI->m_selectedMode = m_currentMode;
+    // gm->setGameVariable("0003", m_swipeEnabled);
+    if(!gm->getGameVariable("0003")) {
+        auto menu = (CCMenu*)editorUI->getChildren()->objectAtIndex(5);
+        auto swipeBtn = menu->getChildren()->objectAtIndex(3);
+        editorUI->toggleSwipe(swipeBtn);
+    }
+
+    // editorUI->m_selectedMode = m_currentMode;
+    m_aiSelectObjects = false;
+    m_ignoreLayer = false;
+    m_selectedRect = {0, 0, 0, 0};
     m_aiMode = false;
 
-    editorUI->m_editButtonBar->setPositionY(0);
+    // editorUI->m_editButtonBar->setPositionY(0);
 
-    if(okBtn != nullptr)
-        okBtn->removeFromParent();
+    if(okBtn) okBtn->removeFromParent();
 
     m_drawbox->clear();
 
@@ -95,45 +108,47 @@ void AIMenu::textChanged(CCTextInputNode* p0) {
 
 void AIMenu::setup() {
 	this->setZOrder(101);
-
-	auto menu = cocos2d::CCMenu::create();
-    menu->setID("kolyah35.gdn/menu");
     auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();	
-
+	
+    // auto menu = CCMenu::create();
+    
     auto selectBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Select area"), this, cocos2d::SEL_MenuHandler(&AIMenu::selectAreaClicked));
-    selectBtn->setPosition(menu->convertToNodeSpace({winSize.width / 2, 235}));
-	menu->addChild(selectBtn);
+    selectBtn->setPosition(this->m_buttonMenu->convertToNodeSpace({winSize.width / 2, 235}));
+	this->m_buttonMenu->addChild(selectBtn);
 
 	auto textInputBG = cocos2d::extension::CCScale9Sprite::create("square02_001.png");
 	textInputBG->setContentSize({260, 100});
-	textInputBG->setPosition(menu->convertToNodeSpace(winSize / 2));
+	textInputBG->setPosition(winSize / 2);
 	textInputBG->setOpacity(125);
-	menu->addChild(textInputBG);
+	this->m_mainLayer->addChild(textInputBG);
 
-    auto textArea = TextArea::create("Your prompt...", "chatFont.fnt", 1.0f, 230, {0.5f, 0.5f}, 10.0f, true);
+    auto textArea = TextArea::create("", "chatFont.fnt", 1.0f, 230, {0.5f, 0.5f}, 10.0f, true);
     textArea->setID("kolyah35.gdn/textArea");
-    textArea->setPosition(menu->convertToNodeSpace(winSize / 2));
-	menu->addChild(textArea);
+    textArea->setPosition(this->m_buttonMenu->convertToNodeSpace(winSize / 2));
+	this->m_buttonMenu->addChild(textArea);
 
 	auto textInput = CCTextInputNode::create(260, 100, "Your prompt...", "chatFont.fnt");
-	textInput->setPosition(menu->convertToNodeSpace(winSize / 2));
-    textInput->getPlaceholderLabel()->setVisible(false);
+    textInput->setAllowedChars(" abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-!?:;)(/\\\"'`*=+-_%[]<>|@&^#{}%$~");
+    textInput->addTextArea(textArea);
+	textInput->setPosition(this->m_buttonMenu->convertToNodeSpace(winSize / 2));
+    textInput->setLabelPlaceholderColor({128, 128, 128});
     textInput->setDelegate(this);
-	menu->addChild(textInput);
+	this->m_buttonMenu->addChild(textInput);
 
-	auto sendBtn = ButtonSprite::create("Send");
-	sendBtn->setPosition(menu->convertToNodeSpace({winSize.width / 2, 85}));
-	menu->addChild(sendBtn);
+	auto sendBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Send"), this, SEL_MenuHandler(&AIMenu::onSendBtn));
+	sendBtn->setPosition(this->m_buttonMenu->convertToNodeSpace({winSize.width / 2, 85}));
+	this->m_buttonMenu->addChild(sendBtn);
 
-	menu->setPosition(winSize / 2);
-	this->m_mainLayer->addChild(menu);
+	// menu->setPosition(winSize / 2);
+	// this->m_mainLayer->addChild(menu);
+    // menu->setID("kolyah35.gdn/menu");
 }
 
 void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
     auto menu = (cocos2d::CCMenu*)this->getChildByIDRecursive("kolyah35.gdn/menu");
     auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();
-    auto editorUI = (EditorUI*)CCScene::get()->getChildByIDRecursive("EditorUI");
-    
+    auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
+    auto editorUI = (EditorUI*)levelEditorLayer->getChildren()->objectAtIndex(7);
 
     if(!m_aiMode){
         m_invisibleArray->removeAllObjects();
@@ -147,22 +162,43 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
             }
         }
 
-        auto slider = (Slider*)editorUI->getChildByID("position-slider");
+        auto layerNum = (CCMenu*)editorUI->getChildren()->objectAtIndex(0);
+        layerNum->setVisible(true);
+
+        auto slider = (Slider*)editorUI->getChildren()->objectAtIndex(4);
         slider->setVisible(true);
 
-        auto zoomMenu = (cocos2d::CCMenu*)editorUI->getChildByID("zoom-menu");
+        auto zoomMenu = (CCMenu*)editorUI->getChildren()->objectAtIndex(5);
         zoomMenu->setVisible(true);
 
-        auto layerMenu = (cocos2d::CCMenu*)editorUI->getChildByID("layer-menu");
-        layerMenu->setVisible(true);
+        for(int i = 0; i < zoomMenu->getChildrenCount(); i++) {
+            if(i == 13 || i == 14) continue;
 
-        editorUI->m_editButtonBar->setPositionY(-200);
+            auto obj = (CCNode*)zoomMenu->getChildren()->objectAtIndex(i);
+            m_invisibleArray->addObject(obj);
+            obj->setVisible(false);
+        }
 
-        m_swipeEnabled = editorUI->m_swipeEnabled;
+        auto btnsMenu = (CCMenu*)editorUI->getChildren()->objectAtIndex(25);
+        btnsMenu->setVisible(true);
+
+        for(int i = 0; i < btnsMenu->getChildrenCount(); i++) {
+            if(i >= 14 && i <= 16) continue;
+
+            auto obj = (CCNode*)btnsMenu->getChildren()->objectAtIndex(i);
+            m_invisibleArray->addObject(obj);
+            obj->setVisible(false);
+        }
+
+        // editorUI->m_editButtonBar->setPositionY(-200);
+
+        auto gm = GameManager::sharedState();
+
+        m_swipeEnabled = gm->getGameVariable("0003");
         m_currentMode = editorUI->m_selectedMode;
         m_aiMode = true;
 
-        editorUI->m_swipeEnabled = true;
+        // gm->setGameVariable("0003", true);
         editorUI->m_selectedMode = 3;
 
         auto okBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("OK"), this, cocos2d::SEL_MenuHandler(&AIMenu::okButtonClicked));
@@ -176,9 +212,64 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
 }
 
 void AIMenu::okButtonClicked(CCObject*) {
-    auto editorUI = (EditorUI*)CCScene::get()->getChildByIDRecursive("EditorUI");
+    auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
+    auto editorUI = (EditorUI*)levelEditorLayer->getChildren()->objectAtIndex(7);
     auto aiMenu = AIMenu::create(300, 200);
 
     aiMenu->setID("kolyah35.gdn/AIMenu");
     editorUI->getParent()->addChild(aiMenu);
+
+    m_aiSelectObjects = true;
+    auto objectsInAIRect = levelEditorLayer->objectsInRect(m_selectedRect, m_ignoreLayer);
+
+    CCObject* obj;
+    CCARRAY_FOREACH(objectsInAIRect, obj) {
+        GameObject* object = dynamic_cast<GameObject*>(obj);
+        levelEditorLayer->removeObject(object, false);
+        log::info("delete");
+    }
+}
+
+void AIMenu::onSendBtn(CCObject*) {
+    auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
+    auto editorUI = (EditorUI*)levelEditorLayer->getChildren()->objectAtIndex(7);
+    
+    std::ifstream t(Mod::get()->getResourcesDir() / "testjson.json");
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+
+    rapidjson::Document blocks;
+    blocks.Parse(buffer.str().c_str());
+
+    for(auto& block : blocks["blocks"].GetArray()) {
+        log::info("AAA");
+        auto obj = block.GetObject();
+        
+        auto ID = obj["ID"].GetInt();
+        
+        auto pos = obj["pos"].GetArray();
+        auto x = pos[0].GetFloat();
+        auto y = pos[1].GetFloat();
+        
+        auto color = obj["color"].GetArray();
+        unsigned char r = color[0].GetUint();
+        unsigned char g = color[1].GetUint();
+        unsigned char b = color[2].GetUint();
+
+        auto scaleX = obj["scaleX"].GetFloat();
+        auto scaleY = obj["scaleY"].GetFloat();
+
+        auto rotation = obj["rotation"].GetInt();
+
+        // auto gameObj = editorUI->createObject(ID, cocos2d::CCPoint {m_selectedRect.origin.x + x, m_selectedRect.origin.y + y});
+        auto gameObj = levelEditorLayer->createObject(ID, cocos2d::CCPoint {m_selectedRect.origin.x + x, m_selectedRect.origin.y + y}, true);
+        gameObj->setObjectColor({r, g, b});
+        gameObj->updateCustomScaleX(scaleX);
+        gameObj->updateCustomScaleX(scaleY);
+        gameObj->setRotation(rotation);
+
+        log::info("place");
+
+        // levelEditorLayer->addSpecial(gameObj);
+    }
 }
