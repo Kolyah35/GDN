@@ -1,5 +1,6 @@
 #pragma once
 #include <cocos2d.h>
+#include <cocos-ext.h>
 
 class AIMenu : public FLAlertLayer, TextInputDelegate {
 public:
@@ -28,4 +29,6 @@ protected:
     void selectAreaClicked(cocos2d::CCObject*);
     void okButtonClicked(CCObject*); 
     void onSendBtn(CCObject*);
+
+    void onHttpCallback(cocos2d::extension::CCHttpClient* client, cocos2d::extension::CCHttpResponse* response);
 };

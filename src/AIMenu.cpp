@@ -1,10 +1,14 @@
 #include "AIMenu.hpp"
 #include <Geode/Geode.hpp>
+#include <Geode/utils/web.hpp>
 #include <rapidjson/document.h>
+#include "rapidjson/stringbuffer.h"
+#include <rapidjson/writer.h>
 
 #undef GetObject
 
 using namespace geode::prelude;
+using namespace rapidjson;
 
 AIMenu* AIMenu::create(float w, float h, const char* spr) {
     auto pRet = new(std::nothrow) AIMenu();
@@ -116,24 +120,28 @@ void AIMenu::setup() {
     selectBtn->setPosition(this->m_buttonMenu->convertToNodeSpace({winSize.width / 2, 235}));
 	this->m_buttonMenu->addChild(selectBtn);
 
-	auto textInputBG = cocos2d::extension::CCScale9Sprite::create("square02_001.png");
-	textInputBG->setContentSize({260, 100});
-	textInputBG->setPosition(winSize / 2);
-	textInputBG->setOpacity(125);
-	this->m_mainLayer->addChild(textInputBG);
+	// auto textInputBG = cocos2d::extension::CCScale9Sprite::create("square02_001.png");
+	// textInputBG->setContentSize({260, 100});
+	// textInputBG->setPosition(winSize / 2);
+	// textInputBG->setOpacity(125);
+	// this->m_mainLayer->addChild(textInputBG);
 
-    auto textArea = TextArea::create("", "chatFont.fnt", 1.0f, 230, {0.5f, 0.5f}, 10.0f, true);
-    textArea->setID("kolyah35.gdn/textArea");
-    textArea->setPosition(this->m_buttonMenu->convertToNodeSpace(winSize / 2));
-	this->m_buttonMenu->addChild(textArea);
+    // auto textArea = TextArea::create("", "chatFont.fnt", 1.0f, 230, {0.5f, 0.5f}, 10.0f, true);
+    // textArea->setID("kolyah35.gdn/textArea");
+    // textArea->setPosition(this->m_buttonMenu->convertToNodeSpace(winSize / 2));
+	// this->m_buttonMenu->addChild(textArea);
 
-	auto textInput = CCTextInputNode::create(260, 100, "Your prompt...", "chatFont.fnt");
-    textInput->setAllowedChars(" abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-!?:;)(/\\\"'`*=+-_%[]<>|@&^#{}%$~");
-    textInput->addTextArea(textArea);
-	textInput->setPosition(this->m_buttonMenu->convertToNodeSpace(winSize / 2));
-    textInput->setLabelPlaceholderColor({128, 128, 128});
-    textInput->setDelegate(this);
-	this->m_buttonMenu->addChild(textInput);
+	// auto textInput = CCTextInputNode::create(260, 100, "Your prompt...", "chatFont.fnt");
+    // textInput->setAllowedChars(" abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-!?:;)(/\\\"'`*=+-_%[]<>|@&^#{}%$~");
+    // textInput->addTextArea(textArea);
+	// textInput->setPosition(this->m_buttonMenu->convertToNodeSpace(winSize / 2));
+    // textInput->setLabelPlaceholderColor({128, 128, 128});
+    // textInput->setDelegate(this);
+	// this->m_buttonMenu->addChild(textInput);
+
+    auto textInput = geode::InputNode::create(260, "Your prompt...", "chatFont.fnt", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-!?:;)(/\\\"'`*=+-_%[]<>|@&^#{}%$~", 200);
+    textInput->setID("kolyah35.gdn/textArea");
+    this->m_buttonMenu->addChild(textInput);
 
 	auto sendBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Send"), this, SEL_MenuHandler(&AIMenu::onSendBtn));
 	sendBtn->setPosition(this->m_buttonMenu->convertToNodeSpace({winSize.width / 2, 85}));
@@ -218,58 +226,174 @@ void AIMenu::okButtonClicked(CCObject*) {
 
     aiMenu->setID("kolyah35.gdn/AIMenu");
     editorUI->getParent()->addChild(aiMenu);
-
-    m_aiSelectObjects = true;
-    auto objectsInAIRect = levelEditorLayer->objectsInRect(m_selectedRect, m_ignoreLayer);
-
-    CCObject* obj;
-    CCARRAY_FOREACH(objectsInAIRect, obj) {
-        GameObject* object = dynamic_cast<GameObject*>(obj);
-        levelEditorLayer->removeObject(object, false);
-        log::info("delete");
-    }
 }
 
 void AIMenu::onSendBtn(CCObject*) {
     auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
     auto editorUI = (EditorUI*)levelEditorLayer->getChildren()->objectAtIndex(7);
+    auto am = GJAccountManager::sharedState();
+    auto inputNode = (InputNode*)this->m_buttonMenu->getChildByID("kolyah35.gdn/textArea");
+
+    m_aiSelectObjects = true;
+    auto objectsInAIRect = levelEditorLayer->objectsInRect(m_selectedRect, m_ignoreLayer);
+
+    Document data;
+    data.SetObject();
+
+    auto allocator = data.GetAllocator();
+
+    Value userobj;
+    userobj.SetObject();
+
+    Value username;
+    username.SetString(am->m_username.c_str(), am->m_username.size());
+    userobj.AddMember("UserName", username, allocator);
+
+    Value prompt;
+    prompt.SetString(inputNode->getString().c_str(), inputNode->getString().length());
+    userobj.AddMember("Prompt", prompt, allocator);
+
+    data.AddMember("User", userobj, allocator);
+
+
+    Value blocks;
+    blocks.SetArray();
+
+    for(int i = 0; i < objectsInAIRect->count(); i++) {
+        auto object = dynamic_cast<GameObject*>(objectsInAIRect->objectAtIndex(i));
+        Value obj;
+        obj.SetObject();
+
+        Value id;
+        id.SetInt(object->m_objectID);
+        obj.AddMember("ID", id, allocator);
+
+        Value x;
+        x.SetInt(object->getPositionX() - m_selectedRect.origin.x);
+        obj.AddMember("X", x, allocator);
+
+        Value y;
+        y.SetInt(object->getPositionY() - m_selectedRect.origin.y);
+        obj.AddMember("Y", y, allocator);
+
+        Value z;
+        z.SetInt(object->m_zOrder);
+        obj.AddMember("Z", z, allocator);
+
+        Value l;
+        l.SetInt(object->m_editorLayer);
+        obj.AddMember("L", l, allocator);
+        
+        Value scaleX;
+        scaleX.SetFloat(object->m_scaleX);
+        obj.AddMember("ScaleX", scaleX, allocator);
+        
+        Value scaleY;
+        scaleY.SetFloat(object->m_scaleY);
+        obj.AddMember("ScaleY", scaleY, allocator);
+        
+        Value color;
+        color.SetArray();
+
+        for(int i = 0; i < object->m_colorGroupCount; i++) {
+            Value id;
+            id.SetInt(object->m_colorGroups->at(i));
+            color.PushBack(id, data.GetAllocator());
+        }
+
+        obj.AddMember("Color", color, allocator);
+
+        Value groups;
+        groups.SetArray();
+
+        for(int i = 0; i < object->m_groupCount; i++) {
+            Value id;
+            id.SetInt(object->m_groups->at(i));
+            groups.PushBack(id, data.GetAllocator());
+        }
+
+        obj.AddMember("Groups", groups, allocator);
+
+        blocks.PushBack(obj, data.GetAllocator());
+    }
+
+    data.AddMember("Blocks", blocks, allocator);
+
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    data.Accept(writer);
+
+    log::info("{} | {} | {}", buffer.GetString(), buffer.GetLength(), buffer.GetSize());
+
+    auto client = CCHttpClient::getInstance();
+    auto request = new CCHttpRequest();
+    request->setUrl("http://127.0.0.1:8000/api");
+
+    auto str = fmt::format("json={}", buffer.GetString());
+    request->setRequestData(str.c_str(), str.length());
+    request->setRequestType(CCHttpRequest::kHttpPost);
+    request->setResponseCallback(this, SEL_HttpResponse(&AIMenu::onHttpCallback));
+    request->setUserData(objectsInAIRect);
+
+    client->send(request);
+
+    auto notification = Notification::create("Sending request...", NotificationIcon::Loading, 0);
+    notification->setID("kolyah35.gdn/notification");
+    notification->show();
+}
+
+void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
+    auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
+    auto objectsInAIRect = (CCArray*)response->getHttpRequest()->getUserData();
+    auto notification = (Notification*)this->getChildByIDRecursive("kolyah35.gdn/notification");
     
-    std::ifstream t(Mod::get()->getResourcesDir() / "testjson.json");
-    std::stringstream buffer;
-    buffer << t.rdbuf();
+    if(response->isSucceed()) {
+        CCObject* obj;
+        CCARRAY_FOREACH(objectsInAIRect, obj) {
+            GameObject* object = dynamic_cast<GameObject*>(obj);
+            if(!object->isTrigger())
+                levelEditorLayer->removeObject(object, true);
+        }
 
-    rapidjson::Document blocks;
-    blocks.Parse(buffer.str().c_str());
+        notification->setIcon(NotificationIcon::Error);
+        notification->setString(fmt::format("Error {}", response->getResponseCode()));
+        notification->setTime(1.0f);
+    } else {
+        return;
+    }
 
-    for(auto& block : blocks["blocks"].GetArray()) {
-        log::info("AAA");
+    auto resp = response->getResponseData();
+    // auto resp = "{\"Blocks\": [{\"ID\": 1,\"X\": 0,\"Y\": 0,\"Z\": 8,\"L\": 1,\"ScaleX\": 2,\"ScaleY\": 4,\"Color\": [],\"Groups\": [1, 3]}],\"Colors\": [{\"ID\": 3,\"R\": 255,\"G\": 0,\"B\": 0}] }";
+
+    log::info("RETURNED JSON {}", resp->data());
+
+    Document responsejson;
+    responsejson.Parse(resp->data());
+
+    for(auto& block : responsejson["Blocks"].GetArray()) {
         auto obj = block.GetObject();
         
         auto ID = obj["ID"].GetInt();
-        
-        auto pos = obj["pos"].GetArray();
-        auto x = pos[0].GetFloat();
-        auto y = pos[1].GetFloat();
-        
-        auto color = obj["color"].GetArray();
-        unsigned char r = color[0].GetUint();
-        unsigned char g = color[1].GetUint();
-        unsigned char b = color[2].GetUint();
+    
+        auto x = obj["X"].GetFloat();
+        auto y = obj["Y"].GetFloat();
+        auto z = obj["Z"].GetInt();
+        auto l = obj["L"].GetInt();
 
-        auto scaleX = obj["scaleX"].GetFloat();
-        auto scaleY = obj["scaleY"].GetFloat();
+        auto scaleX = obj["ScaleX"].GetFloat();
+        auto scaleY = obj["ScaleY"].GetFloat();
 
-        auto rotation = obj["rotation"].GetInt();
+        auto color = obj["Color"].GetArray();
+        auto groups = obj["Groups"].GetArray();
 
         // auto gameObj = editorUI->createObject(ID, cocos2d::CCPoint {m_selectedRect.origin.x + x, m_selectedRect.origin.y + y});
         auto gameObj = levelEditorLayer->createObject(ID, cocos2d::CCPoint {m_selectedRect.origin.x + x, m_selectedRect.origin.y + y}, true);
-        gameObj->setObjectColor({r, g, b});
+        // gameObj->setCustomZLayer(z);
         gameObj->updateCustomScaleX(scaleX);
-        gameObj->updateCustomScaleX(scaleY);
-        gameObj->setRotation(rotation);
+        gameObj->updateCustomScaleY(scaleY);
 
         log::info("place");
 
-        // levelEditorLayer->addSpecial(gameObj);
+        levelEditorLayer->addSpecial(gameObj);
     }
 }
