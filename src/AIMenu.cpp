@@ -327,26 +327,28 @@ void AIMenu::onSendBtn(CCObject*) {
 
     auto client = CCHttpClient::getInstance();
     auto request = new CCHttpRequest();
-    request->setUrl("http://127.0.0.1:8000/api");
-
-    auto str = fmt::format("json={}", buffer.GetString());
-    request->setRequestData(str.c_str(), str.length());
+    request->setUrl(Mod::get()->getSettingValue<std::string>("url").c_str());
+    request->setRequestData(buffer.GetString(), buffer.GetLength());
     request->setRequestType(CCHttpRequest::kHttpPost);
     request->setResponseCallback(this, SEL_HttpResponse(&AIMenu::onHttpCallback));
     request->setUserData(objectsInAIRect);
 
+    log::info("APIURL {}", request->getUrl());
+
     client->send(request);
 
-    auto notification = Notification::create("Sending request...", NotificationIcon::Loading, 0);
-    notification->setID("kolyah35.gdn/notification");
+    notification = Notification::create("Sending request...", NotificationIcon::Loading, 0);
+    // notification->setID("kolyah35.gdn/notification");
     notification->show();
 }
 
 void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
     auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
     auto objectsInAIRect = (CCArray*)response->getHttpRequest()->getUserData();
-    auto notification = (Notification*)this->getChildByIDRecursive("kolyah35.gdn/notification");
+    // auto notification = (Notification*)this->getChildByIDRecursive("kolyah35.gdn/notification");
     
+    log::info("HTTP CALLBACK");
+
     if(response->isSucceed()) {
         CCObject* obj;
         CCARRAY_FOREACH(objectsInAIRect, obj) {
@@ -354,11 +356,12 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
             if(!object->isTrigger())
                 levelEditorLayer->removeObject(object, true);
         }
-
-        notification->setIcon(NotificationIcon::Error);
-        notification->setString(fmt::format("Error {}", response->getResponseCode()));
-        notification->setTime(1.0f);
     } else {
+        log::info("HTTP ERROR");
+        notification->setIcon(NotificationIcon::Error);
+        notification->setString(fmt::format("Error {}: ", response->getResponseCode(), response->getErrorBuffer()));
+        notification->setTime(1.0f);
+
         return;
     }
 
@@ -396,4 +399,8 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
 
         levelEditorLayer->addSpecial(gameObj);
     }
+
+    notification->setIcon(NotificationIcon::Success);
+    notification->setString("Success!");
+    notification->setTime(1.0f);
 }

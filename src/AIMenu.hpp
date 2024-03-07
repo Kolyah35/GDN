@@ -1,6 +1,7 @@
 #pragma once
 #include <cocos2d.h>
 #include <cocos-ext.h>
+#include <Geode/ui/Notification.hpp>
 
 class AIMenu : public FLAlertLayer, TextInputDelegate {
 public:
@@ -12,6 +13,7 @@ public:
     static inline cocos2d::CCArray* m_invisibleArray;
     static inline cocos2d::CCDrawNode* m_drawbox;
     static inline cocos2d::CCRect m_selectedRect;
+    static inline geode::Notification* notification;
 
     static AIMenu* create(float w, float h, const char* spr = "GJ_square01.png");
 

@@ -8,5 +8,12 @@
 	"description": "AI for level creating",
 	"resources": {
 		"files": ["resources/testjson.json"]
+	},
+	"settings": {
+		"url":{
+			"default": "http://127.0.0.1:8000/api",
+			"description": "URL for api",
+			"type": "string"
+		}
 	}
 }
