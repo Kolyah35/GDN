@@ -19,9 +19,9 @@ else()
 endif()
 
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
-add_subdirectory(external/rapidjson)
+# add_subdirectory(external/json)
 
 setup_geode_mod(${PROJECT_NAME})
 
-target_include_directories(${PROJECT_NAME} PUBLIC external/rapidjson/include)
-target_link_libraries(${PROJECT_NAME} RapidJSON)
+target_include_directories(${PROJECT_NAME} PUBLIC external/json/include)
+# target_link_libraries(${PROJECT_NAME} RapidJSON)

@@ -1,9 +1,10 @@
 #pragma once
-#include <cocos2d.h>
-#include <cocos-ext.h>
+#include <Geode/Geode.hpp>
+// #include <cocos-ext.h>
 #include <Geode/ui/Notification.hpp>
+#include <string>
 
-class AIMenu : public FLAlertLayer, TextInputDelegate {
+class AIMenu : public FLAlertLayer {
 public:
     static inline bool m_aiMode;
     static inline bool m_aiSelectObjects;
@@ -19,18 +20,19 @@ public:
 
 protected:
     cocos2d::CCSize m_layerSize;
-
+    
     bool init(float w, float h, const char* spr = "GJ_square01.png");
 
     void setup();
 
     void onClose(cocos2d::CCObject*);
 
-    void textChanged(CCTextInputNode* p0) override;
-
     void selectAreaClicked(cocos2d::CCObject*);
     void okButtonClicked(CCObject*); 
     void onSendBtn(CCObject*);
 
     void onHttpCallback(cocos2d::extension::CCHttpClient* client, cocos2d::extension::CCHttpResponse* response);
+    
+    std::string createColorTrigger(int colId, cocos2d::ccColor3B col, float dur);
+    std::string createStandardObject(cocos2d::CCPoint pos, int id, int z, int l, float scaleX, float scaleY, int baseCol, int detailCol);
 };

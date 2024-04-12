@@ -4,7 +4,24 @@
 
 #include "AIMenu.hpp"
 
-#define ALIGN(var) ((int)##var % 30)
+/*
+	ОСТОРОЖНО! ЩИТКОД
+	Многие вещи в этом моде были написаны на скорую руку
+	для теста и в планах былодорботать все на релизе, но 
+	я устал работать над этим модом. Удачи.
+*/
+
+/*
+    я исправил немного щиткода
+
+	почему   прошлый   программист   решил  использовать
+	rapidjson?? есть же более удобная альтернатива этому
+
+	в моей  среде  rapidjson  не  хочет  компилироваться
+	в никакую
+*/
+
+#define ALIGN(var) ((int)var % 30)
 
 using namespace geode::prelude;
 
@@ -76,3 +93,13 @@ class $modify(LevelEditorLayer){
 		}
 	}
 };
+
+// class MySettingValue : StringSettingValue {
+// public:
+	
+// };
+
+// $execute {
+// 	auto urlSetting = Mod::get()->getSettingDefinition("url");
+	
+// }
