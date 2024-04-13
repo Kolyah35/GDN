@@ -36,8 +36,8 @@ bool AIMenu::init(float w, float h, const char* spr) {
     this->m_buttonMenu = cocos2d::CCMenu::create();
     this->m_mainLayer->addChild(this->m_buttonMenu);
 
-    this->setKeypadEnabled(true);
-    this->setTouchEnabled(true);
+    // this->setKeypadEnabled(true);
+    // this->setTouchEnabled(true);
     // this->setKeyboardEnabled(false);
 
     setup();
@@ -193,7 +193,7 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
         editorUI->addChild(_menu);
     }
 
-    this->setKeyboardEnabled(false);
+    // this->setKeyboardEnabled(false);
     this->removeFromParentAndCleanup(true);
 }
 
@@ -348,7 +348,7 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
     } else {
         log::info("HTTP ERROR");
         notification->setIcon(NotificationIcon::Error);
-        notification->setString(fmt::format("Error {}: {} ({})", response->getResponseCode(), response->getErrorBuffer(), response->getResponseData()->data()));
+        notification->setString(fmt::format("Error {}: {}", response->getResponseCode(), response->getErrorBuffer()));
         notification->setTime(1.0f);
 
         return;

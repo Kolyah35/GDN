@@ -1,6 +1,9 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/EditorUI.hpp>
+#include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/LevelEditorLayer.hpp>
+#include <Geode/binding/FLAlertLayer.hpp>
+#include <Geode/binding/FLAlertLayerProtocol.hpp>
 
 #include "AIMenu.hpp"
 
@@ -25,18 +28,46 @@
 
 using namespace geode::prelude;
 
+class REMessage {
+public:
+	void run() {
+		printf("hello reverse engineers welcome to the game\n");
+	}
+};
+
 class $modify(AIEditor, EditorUI) {
 	bool init(LevelEditorLayer* editor) {
 		if(!EditorUI::init(editor)) return false;
 
 		// auto menu = (CCMenu*)this->getChildren()->objectAtIndex(24);
-		auto menu = CCMenu::create();
-		auto aibtn = CCMenuItemSpriteExtra::create(CCSprite::createWithSpriteFrameName("GJ_deSelBtn2_001.png"), this, SEL_MenuHandler(&AIEditor::onAI));
+
+		auto btn_spr = EditorButtonSprite::createWithSprite(
+			"gdn2.png"_spr,
+			0.8f,
+			EditorBaseColor::Gray,
+			EditorBaseSize::Normal
+		);
+
+		if (!btn_spr) {
+			log::info("failed to create EditorButtonSprite\n");
+
+			AIMenu::m_invisibleArray = cocos2d::CCArray::create();
+    		AIMenu::m_invisibleArray->retain();
+
+			return true;
+		}
+
+		auto menu = this->getChildByID("editor-buttons-menu");
+		
+		auto aibtn = CCMenuItemSpriteExtra::create(btn_spr, this, SEL_MenuHandler(&AIEditor::onAI));
+		
 		aibtn->setPosition({-110, 150});
+		aibtn->setID("gdn-create");
 
 		menu->addChild(aibtn);
-		this->addChild(menu);
-		// menu->alignItemsHorizontallyWithPadding(48);
+		menu->updateLayout();
+
+		aibtn->setAnchorPoint({0.7f, 0.65f});
 
 		AIMenu::m_invisibleArray = cocos2d::CCArray::create();
     	AIMenu::m_invisibleArray->retain();
@@ -53,6 +84,65 @@ class $modify(AIEditor, EditorUI) {
 		if(!AIMenu::m_aiMode)
 			return EditorUI::onPause(sender);
 	}
+};
+
+class AIDelegate : public FLAlertLayerProtocol {
+public:
+	void FLAlert_Clicked(FLAlertLayer *l, bool idk) override {
+		if (idk != 1) return;
+
+		ShellExecuteA(NULL, "open", "https://discord.gg/gdn-neiroset-dlia-geometry-dash-1115715187484414044", NULL, NULL, SW_SHOWNORMAL);
+	}
+};
+
+namespace AISettings {
+	AIDelegate delegate;
+	REMessage reMessage;
+}
+
+class $modify(AMenuLayer, MenuLayer) {
+	bool init() {
+		if (!MenuLayer::init()) return false;
+
+		auto bottomMenu = static_cast<CCMenu*>(this->getChildByID("bottom-menu"));
+
+		auto winSize = CCDirector::sharedDirector()->getWinSize();
+
+		auto btn_spr = CircleButtonSprite::createWithSprite(
+			"gdn2.png"_spr,
+			1.0f,
+			CircleBaseColor::Green,
+			CircleBaseSize::MediumAlt
+		);
+
+		if (!btn_spr) {
+			log::info("failed to create CircleButtonSprite\n");
+			return true;
+		}
+
+		auto btn = CCMenuItemSpriteExtra::create(
+        	btn_spr, this,
+            static_cast<SEL_MenuHandler>(&AMenuLayer::onGDN)
+        );
+
+		if (!btn) {
+			log::info("failed to create CCMenuItemSpriteExtra\n");
+			return true;
+		}
+
+        btn->setID("gdn-button"_spr);
+        bottomMenu->addChild(btn);
+        bottomMenu->setContentSize({ winSize.width / 2, bottomMenu->getScaledContentSize().height });
+
+        bottomMenu->updateLayout();
+
+		return true;
+	}
+
+	void onGDN(CCObject *obj) {
+		FLAlertLayer *l = FLAlertLayer::create(&AISettings::delegate, "GDN", "Are you sure you want to <cy>join</c> GDN's <cj>Discord server</c>?", "No", "Yes");
+		l->show(); 
+    }
 };
 
 class $modify(LevelEditorLayer){
