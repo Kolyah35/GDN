@@ -1,19 +1,26 @@
 {
 	"geode": "2.0.0",
 	"gd": "2.204",
-	"version": "v1.0.0",
+	"version": "v1.1.0-beta.1",
 	"id": "kolyah35.gdn",
 	"name": "GDN",
-	"developer": "Kolyah35",
-	"description": "AI for level creating",
+	"developer": "Kolyah35 & dogotrigger",
+	"description": "AI for creating levels",
+	"dependencies": [{"id": "geode.node-ids", "importance": "required", "version": "*"}],
 	"resources": {
-		"files": ["resources/testjson.json"]
+		"files": ["resources/testjson.json"],
+		"sprites": ["resources/*.png"]
 	},
 	"settings": {
-		"url":{
+		"url": {
 			"default": "http://127.0.0.1:8000/api",
-			"description": "URL for api",
-			"type": "string"
+			"description": "URL for API",
+			"type": "string",
+			"filter": "^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ,.-!/()=?`*;:_{}[]\\|~"
 		}
+	},
+	"issues": {
+		"info": "You can report issues about GDN in our <cj>Discord server</c>",
+		"url": "https://discord.gg/gdn-neiroset-dlia-geometry-dash-1115715187484414044"
 	}
 }
