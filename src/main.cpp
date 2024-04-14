@@ -6,6 +6,7 @@
 #include <Geode/binding/FLAlertLayerProtocol.hpp>
 
 #include "AIMenu.hpp"
+#include "GDNLayer.hpp"
 
 /*
 	ОСТОРОЖНО! ЩИТКОД
@@ -35,6 +36,12 @@ public:
 	}
 };
 
+namespace AISettings {
+	REMessage reMessage;
+	bool loginSuccessful = false;
+	bool attemptedToLogin = false;
+}
+
 class $modify(AIEditor, EditorUI) {
 	bool init(LevelEditorLayer* editor) {
 		if(!EditorUI::init(editor)) return false;
@@ -43,7 +50,7 @@ class $modify(AIEditor, EditorUI) {
 
 		auto btn_spr = EditorButtonSprite::createWithSprite(
 			"gdn2.png"_spr,
-			0.8f,
+			0.5f,
 			EditorBaseColor::Gray,
 			EditorBaseSize::Normal
 		);
@@ -76,8 +83,27 @@ class $modify(AIEditor, EditorUI) {
 	}
 
 	void onAI(CCObject* obj) {
-		auto aiMenu = AIMenu::create(300, 200);
-		this->getParent()->addChild(aiMenu);
+		if (AISettings::attemptedToLogin) {
+			if (!AISettings::loginSuccessful) {
+				GDNLayer::loginFailureMessage();
+
+				return;
+			} else {
+				auto aiMenu = AIMenu::create(300, 200);
+				this->getParent()->addChild(aiMenu);
+			}
+		} else {
+			AISettings::attemptedToLogin = true;
+
+			auto l = GDNLayer::create();
+			l->setCloseOnFullSuccess(true);
+			l->setCallback([this, obj] (GDNLayer *) {
+				AISettings::loginSuccessful = true;
+				onAI(obj);
+			});
+
+			addChild(l, 100);
+		}
 	}
 
 	void onPause(CCObject* sender) {
@@ -85,20 +111,6 @@ class $modify(AIEditor, EditorUI) {
 			return EditorUI::onPause(sender);
 	}
 };
-
-class AIDelegate : public FLAlertLayerProtocol {
-public:
-	void FLAlert_Clicked(FLAlertLayer *l, bool idk) override {
-		if (idk != 1) return;
-
-		ShellExecuteA(NULL, "open", "https://discord.gg/gdn-neiroset-dlia-geometry-dash-1115715187484414044", NULL, NULL, SW_SHOWNORMAL);
-	}
-};
-
-namespace AISettings {
-	AIDelegate delegate;
-	REMessage reMessage;
-}
 
 class $modify(AMenuLayer, MenuLayer) {
 	bool init() {
@@ -140,12 +152,24 @@ class $modify(AMenuLayer, MenuLayer) {
 	}
 
 	void onGDN(CCObject *obj) {
-		FLAlertLayer *l = FLAlertLayer::create(&AISettings::delegate, "GDN", "Are you sure you want to <cy>join</c> GDN's <cj>Discord server</c>?", "No", "Yes");
-		l->show(); 
+		AISettings::attemptedToLogin = true;
+
+		auto l = GDNLayer::create();
+
+		l->setCallback([this, obj] (GDNLayer *) {
+			AISettings::loginSuccessful = true;
+		});
+
+		addChild(l, 100);
     }
 };
 
-class $modify(LevelEditorLayer){
+/**
+ * void onPausePlaytest() = win 0x246c70;
+	void onPlaytest() = win 0x2463a0;
+	void onResumePlaytest() = win 0x246d6
+*/
+class $modify(ALevelEditorLayer, LevelEditorLayer){
 	bool init(GJGameLevel* level, bool p1) {
 		if(!LevelEditorLayer::init(level, p1)) return false;
 
@@ -154,6 +178,30 @@ class $modify(LevelEditorLayer){
 		this->m_objectLayer->addChild(AIMenu::m_drawbox);
 
 		return true;
+	}
+
+	void hideEditorButtons() {
+		auto menu = this->m_editorUI->getChildByID("editor-buttons-menu");
+
+		menu->setVisible(false);
+	}
+	void showEditorButtons() {
+		auto menu = this->m_editorUI->getChildByID("editor-buttons-menu");
+
+		menu->setVisible(true);
+	}
+
+	void onPausePlaytest() {
+		LevelEditorLayer::onPausePlaytest();
+		showEditorButtons();
+	}
+	void onPlaytest() {
+		LevelEditorLayer::onPlaytest();
+		hideEditorButtons();
+	}
+	void onResumePlaytest() {
+		LevelEditorLayer::onResumePlaytest();
+		hideEditorButtons();
 	}
 
 	CCArray* objectsInRect(cocos2d::CCRect rect, bool ignoreLayer) {
