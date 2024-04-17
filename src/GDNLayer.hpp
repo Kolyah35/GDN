@@ -18,8 +18,28 @@ protected:
     bool _closeOnFullSuccess = false;
 
     std::function<void(GDNLayer*)> _callback = nullptr;
+
+    std::string _returnedData;
+    std::string _url;
+
+    std::string _success;
+    
+    std::string _failure;
+    std::string _returnedFailure;
+
+    bool _failed = false;
+
+    FLAlertLayerProtocol *_protocol;
 public:
     CREATE_FUNC(GDNLayer);
+
+    void setURL(std::string url);
+    void begin();
+
+    // void setButtonProvider(FLAlertLayerProtocol *protocol);
+
+    void setFailureMessage(std::string str);
+    void setSuccessMessage(std::string str);
 
     void setCloseOnFullSuccess(bool state);
     void setCallback(std::function<void(GDNLayer*)> callback);
@@ -33,5 +53,11 @@ public:
     void onLoginSuccess();
     void onLoginFailure();
 
-    static void loginFailureMessage();
+    void loginFailureMessage();
+    static void sendAlert(std::string alert);
+    std::string getReturnedFailureMessage();
+
+    std::string getReturnedData();
+
+    bool isFailed();
 };

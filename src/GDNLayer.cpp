@@ -6,6 +6,10 @@
 using namespace geode::prelude;
 
 bool GDNLayer::init() {
+    _protocol = this;
+    _failure = "You are not <cp>registered in GD Neural.</c> Do you want to <cy>join</c> GDN's <cj>Discord server</c>?";
+    _success = "Success! <cg>Access granted.</c>";
+
     CCLayer *l = cocos2d::CCLayer::create();
 
     auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();
@@ -31,18 +35,6 @@ bool GDNLayer::init() {
 
     addChild(l, 1024);
 
-    web::AsyncWebRequest()
-        .fetch("https://pastebin.com/raw/vNi1WHNF")
-        .text()
-        .then([this](std::string const& data) {
-            close();
-            onSuccess(data);
-        })
-        .expect([this](std::string const& error) {
-            close();
-            onError(error);
-        });
-
     return true;
 }
 
@@ -57,11 +49,9 @@ void GDNLayer::onError(std::string response) {
 
     FLAlertLayer *l = FLAlertLayer::create("Error", msg, "OK");
     l->show();
-
-    removeMeAndCleanup();
 }
 void GDNLayer::onSuccess(std::string response) {
-    onLoginFailure();
+    onLoginSuccess();
 }
 
 void GDNLayer::onLoginSuccess() {
@@ -70,16 +60,30 @@ void GDNLayer::onLoginSuccess() {
     }
 
     if (_closeOnFullSuccess) return;
+
+    FLAlertLayer *l = FLAlertLayer::create("GDN", _success, "OK");
+    l->show();
 }
 
 void GDNLayer::loginFailureMessage() {
-    FLAlertLayer *l = FLAlertLayer::create(new GDNLayerProtocol(), "GDN", "You are not <cp>registered in GD Neural.</c> Do you want to <cy>join</c> GDN's <cj>Discord server</c>?", "No", "Yes");
-    l->show();
+    sendAlert(_failure);
+
+    _returnedFailure = _failure;
+}
+std::string GDNLayer::getReturnedFailureMessage() {
+    return _returnedFailure;
 }
 void GDNLayer::onLoginFailure() {
+    _failed = true;
+
+    if (_callback != nullptr) {
+        _returnedFailure = _failure;
+        _callback(this);
+    }
+
     loginFailureMessage();
 
-    removeMeAndCleanup();
+    // removeMeAndCleanup();
 }
 
 void GDNLayerProtocol::FLAlert_Clicked(FLAlertLayer *l, bool idk) {
@@ -93,4 +97,41 @@ void GDNLayer::setCloseOnFullSuccess(bool state) {
 }
 void GDNLayer::setCallback(std::function<void(GDNLayer*)> callback) {
     _callback = callback;
+}
+
+void GDNLayer::setURL(std::string url) {
+    _url = url;
+}
+void GDNLayer::begin() {
+    web::AsyncWebRequest()
+        .fetch(_url)
+        .text()
+        .then([this](std::string const& data) {
+            close();
+            onSuccess(data);
+        })
+        .expect([this](std::string const& error) {
+            close();
+            onError(error);
+        });
+}
+
+void GDNLayer::setFailureMessage(std::string str) {
+    _success = str;
+}
+void GDNLayer::setSuccessMessage(std::string str) {
+    _failure = str;
+}
+
+// void GDNLayer::setButtonProvider(FLAlertLayerProtocol *protocol) {
+//     _protocol = protocol;
+// }
+
+bool GDNLayer::isFailed() {
+    return _failed;
+}
+
+void GDNLayer::sendAlert(std::string alert) {
+    FLAlertLayer *l = FLAlertLayer::create(new GDNLayerProtocol(), "GDN", alert, "No", "Yes");
+    l->show();
 }

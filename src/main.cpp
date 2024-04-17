@@ -40,6 +40,7 @@ namespace AISettings {
 	REMessage reMessage;
 	bool loginSuccessful = false;
 	bool attemptedToLogin = false;
+	std::string failureReason;
 }
 
 class $modify(AIEditor, EditorUI) {
@@ -85,7 +86,8 @@ class $modify(AIEditor, EditorUI) {
 	void onAI(CCObject* obj) {
 		if (AISettings::attemptedToLogin) {
 			if (!AISettings::loginSuccessful) {
-				GDNLayer::loginFailureMessage();
+				// GDNLayer::loginFailureMessage();
+				GDNLayer::sendAlert(AISettings::failureReason);
 
 				return;
 			} else {
@@ -93,12 +95,18 @@ class $modify(AIEditor, EditorUI) {
 				this->getParent()->addChild(aiMenu);
 			}
 		} else {
-			AISettings::attemptedToLogin = true;
-
 			auto l = GDNLayer::create();
+
 			l->setCloseOnFullSuccess(true);
-			l->setCallback([this, obj] (GDNLayer *) {
-				AISettings::loginSuccessful = true;
+			l->setURL("https://example.com");
+			l->begin();
+
+			l->setCallback([this, obj] (GDNLayer *l2) {
+				AISettings::loginSuccessful = !l2->isFailed();
+				AISettings::attemptedToLogin = true;
+				if (!AISettings::loginSuccessful) {
+					AISettings::failureReason = l2->getReturnedFailureMessage();
+				}
 				onAI(obj);
 			});
 
@@ -152,12 +160,16 @@ class $modify(AMenuLayer, MenuLayer) {
 	}
 
 	void onGDN(CCObject *obj) {
-		AISettings::attemptedToLogin = true;
-
 		auto l = GDNLayer::create();
+		l->setURL("https://example.com");
+		l->begin();
 
-		l->setCallback([this, obj] (GDNLayer *) {
-			AISettings::loginSuccessful = true;
+		l->setCallback([this] (GDNLayer *l2) {
+			AISettings::attemptedToLogin = true;
+			AISettings::loginSuccessful = !l2->isFailed();
+			if (!AISettings::loginSuccessful) {
+				AISettings::failureReason = l2->getReturnedFailureMessage();
+			}
 		});
 
 		addChild(l, 100);

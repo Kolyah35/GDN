@@ -3,6 +3,7 @@
 #include "AIMenu.hpp"
 #include <Geode/utils/web.hpp>
 #include <nlohmann/json.hpp>
+#include "GDNLayer.hpp"
 
 #undef GetObject
 
@@ -59,6 +60,8 @@ bool AIMenu::init(float w, float h, const char* spr) {
     this->m_mainLayer->setScale(0.1f);
     this->m_mainLayer->runAction(cocos2d::CCEaseElasticOut::create(cocos2d::CCScaleTo::create(0.5f, 1.0), 0.6f));
 
+    scheduleUpdate();
+
     return true;
 }
 
@@ -100,7 +103,9 @@ void AIMenu::onClose(cocos2d::CCObject*) {
     m_drawbox->clear();
 
     // this->setKeyboardEnabled(true);
-    this->removeFromParentAndCleanup(true);
+    if (_closeWithCleanup) this->removeFromParentAndCleanup(true);
+
+    _closed = true;
 }
 
 void AIMenu::setup() {
@@ -310,6 +315,9 @@ void AIMenu::onSendBtn(CCObject*) {
     notification = Notification::create("Sending request...", NotificationIcon::Loading, 0);
     // notification->setID("kolyah35.gdn/notification");
     notification->show();
+
+    GDNLayer *gdnl = GDNLayer::create();
+    addChild(gdnl);
 }
 
 std::string AIMenu::createColorTrigger(int colId, ccColor3B col, float dur) {
@@ -320,8 +328,8 @@ std::string AIMenu::createColorTrigger(int colId, ccColor3B col, float dur) {
 	return color_trigger_str;
 }
 
-std::string AIMenu::createStandardObject(cocos2d::CCPoint pos, int id, int z, int l, float scaleX, float scaleY, int baseCol, int detailCol) {
-    std::string object_str = fmt::format("1,{},2,{},3,{},20,{},24,{},21,{},22,{},128,{},129,{}", id, pos.x, pos.y, l, z, baseCol, detailCol, scaleX, scaleY);
+std::string AIMenu::createStandardObject(cocos2d::CCPoint pos, int id, int z, int l, float scaleX, float scaleY, int baseCol, int detailCol, float rotation) {
+    std::string object_str = fmt::format("1,{},2,{},3,{},20,{},24,{},21,{},22,{},128,{},129,{},6,{}", id, pos.x, pos.y, l, z, baseCol, detailCol, scaleX, scaleY, rotation);
 	
 	return object_str;
 }
@@ -360,17 +368,22 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
 
     log::info("RETURNED JSON {}", returned_json);
 
-    nlohmann::json responsejson = nlohmann::json::parse((std::string)returned_json);
+    nlohmann::json responsejson = nlohmann::json::parse(returned_json, nullptr, false);
 
-    for(const auto& item : responsejson["Blocks"].items()) {
-        nlohmann::json obj = item.value();
-        
+    // std::string object_array = "";
+    _readyToPlace = false;
+
+    for (int i = 0; i < responsejson["Blocks"].size(); i++) {
+        nlohmann::json obj = responsejson["Blocks"].at(i);
+
         auto ID = obj["ID"].get<int>();
     
         auto x = obj["X"].get<float>();
         auto y = obj["Y"].get<float>();
         auto z = obj["Z"].get<int>();
         auto l = obj["L"].get<int>();
+
+        auto rot = obj["Rotation"].get<float>();
 
         x += m_selectedRect.origin.x;
         y += m_selectedRect.origin.y;
@@ -382,48 +395,32 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
         auto detailColor = obj["DetailColor"].get<int>();
         // auto groups = obj["Groups"].get<int>();
 
-        log::info("creating gameobj");
+        log::info("creating gameobj string");
 
-        // auto gameObj = levelEditorLayer->createObject(ID, cocos2d::CCPoint {m_selectedRect.origin.x + x, m_selectedRect.origin.y + y}, true);
-        // // gameObj->setCustomZLayer(z);
-        // gameObj->updateCustomScaleX(scaleX);
-        // gameObj->updateCustomScaleY(scaleY);
-
-        std::string objdata = createStandardObject({x,y}, ID, z, l, scaleX, scaleY, baseColor, detailColor);
-
-        levelEditorLayer->createObjectsFromString(objdata, false, false);
-
-        // if(baseColor) {
-        //     gameObj->m_baseColor->m_colorID = baseColor;
-        // }
-        
-        // if(detailColor) {
-        //     gameObj->m_detailColor->m_colorID = detailColor;
-        // }
-
-        log::info("place");
-
-        // levelEditorLayer->addSpecial(gameObj);
+        std::string objdata = createStandardObject({x,y}, ID, z, l, scaleX, scaleY, baseColor, detailColor, rot);
+        _gameObjects.push_back(objdata);
     }
 
-    for(auto& color_item : responsejson["Colors"].items()) {
-        nlohmann::json color = color_item.value();
-        log::info("Color set");
+    for (int i = 0; i < responsejson["Colors"].size(); i++) {
+        nlohmann::json color = responsejson["Colors"].at(i);
+
         auto ID = color["ID"].get<int>();
     
         uint8_t r = (unsigned int)color["R"].get<int>();
         uint8_t g = (unsigned int)color["G"].get<int>();
         uint8_t b = (unsigned int)color["B"].get<int>();
        
-//        auto color = levelEditorLayer->m_levelSettings->m_effectManager->getColorAction(ID);
-//        color->m_color = {r, g, b};
-//        levelEditorLayer->updateLevelColors();
-
-        log::info("creating color trigger");
+        log::info("creating color trigger with this info: id={}, r={}, g={}, b={}, dur={}", ID, r, g, b, 0.f);
         
         std::string coldata = createColorTrigger(ID, {r, g, b}, 0.f);
+        log::info("placing color trigger with this data: {}", coldata);
         levelEditorLayer->createObjectsFromString(coldata, false, false);
     }
+
+
+    // object_array.pop_back();
+    // log::info("placing gameobj array: {}", object_array);
+    // levelEditorLayer->createObjectsFromString(object_array, true, false);
 
 //    auto colorAction = levelEditorLayer->m_levelSettings->m_effectManager->getColorSprite(1);
 
@@ -431,7 +428,30 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
     notification->setString("Success!");
     notification->setTime(1.0f);
 
-    delete resp;
+    // delete resp;
 
+    _closeWithCleanup = false;
     onClose(this);
+    removeAllChildrenWithCleanup(true);
+
+    _readyToPlace = true;
+}
+
+void AIMenu::update(float delta) {
+    if (_gameObjects.size() > 0 && _readyToPlace) {
+        _closeWithCleanup = false;
+        if (!_closed) onClose(this);
+        setVisible(false); 
+
+        std::string gameObj = _gameObjects.at(_gameObjects.size() - 1);
+
+        auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
+
+        levelEditorLayer->createObjectsFromString(gameObj, false, false);
+
+        _gameObjects.pop_back();
+        if (_gameObjects.size() == 0) {
+            this->removeFromParentAndCleanup(true);
+        }
+    }
 }
