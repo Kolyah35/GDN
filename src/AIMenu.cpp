@@ -24,10 +24,20 @@ bool AIMenu::init(float w, float h, const char* spr) {
     auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();
     this->m_layerSize = cocos2d::CCSize {w, h};
 
-    if (!this->initWithColor({0, 0, 0, 125}))
+    if (!FLAlertLayer::init(0))
         return false;
-    this->m_mainLayer = cocos2d::CCLayer::create();
+    // this->m_mainLayer = cocos2d::CCLayer::create();
     this->addChild(this->m_mainLayer);
+
+    auto base = cocos2d::CCSprite::create("square.png");
+
+    base->setPosition({ 0, 0 });
+    base->setScale(500.f);
+    base->setColor({0, 0, 0});
+    base->setOpacity(0);
+    base->runAction(cocos2d::CCFadeTo::create(0.15f, 125));
+
+    this->m_mainLayer->addChild(base);
 
     auto bg = cocos2d::extension::CCScale9Sprite::create(spr, {0.0f, 0.0f, 80.0f, 80.0f});
     bg->setContentSize(this->m_layerSize);
@@ -62,12 +72,17 @@ bool AIMenu::init(float w, float h, const char* spr) {
 
     scheduleUpdate();
 
+    m_aiSelectObjects = false;
+    m_aiMode = false;
+
+    // show();
+
     return true;
 }
 
 void AIMenu::onClose(cocos2d::CCObject*) {
     auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
-    auto editorUI = (EditorUI*)levelEditorLayer->getChildren()->objectAtIndex(7);
+    auto editorUI = (EditorUI*)levelEditorLayer->getChildByID("EditorUI");
     auto okBtn = editorUI->getChildByIDRecursive("kolyah35.gdn/okBtn");
     auto gm = GameManager::sharedState();
 
@@ -80,15 +95,15 @@ void AIMenu::onClose(cocos2d::CCObject*) {
     }
 
     // gm->setGameVariable("0003", m_swipeEnabled);
-    if(!gm->getGameVariable("0003")) {
-        auto menu = dynamic_cast<CCMenu *>(editorUI->getChildren()->objectAtIndex(5));
-        if (menu) {
-            auto swipeBtn = menu->getChildren()->objectAtIndex(3);
-            if (swipeBtn) {
-                editorUI->toggleSwipe(swipeBtn);
-            }
-        }
-    }
+    // if(!gm->getGameVariable("0003")) {
+    //     auto menu = dynamic_cast<CCMenu *>(editorUI->getChildren()->objectAtIndex(5));
+    //     if (menu) {
+    //         auto swipeBtn = menu->getChildren()->objectAtIndex(3);
+    //         if (swipeBtn) {
+    //             editorUI->toggleSwipe(swipeBtn);
+    //         }
+    //     }
+    // }
 
     // editorUI->m_selectedMode = m_currentMode;
     m_aiSelectObjects = false;
@@ -129,7 +144,7 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
     auto menu = (cocos2d::CCMenu*)this->getChildByIDRecursive("kolyah35.gdn/menu");
     auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();
     auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
-    auto editorUI = (EditorUI*)levelEditorLayer->getChildren()->objectAtIndex(7);
+    auto editorUI = (EditorUI*)levelEditorLayer->getChildByID("EditorUI");
 
     auto color = levelEditorLayer->m_levelSettings->m_effectManager->getColorAction(3);
     color->m_color = { 145, 255, 0 };
@@ -138,42 +153,44 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
     if(!m_aiMode){
         m_invisibleArray->removeAllObjects();
 
-        for(int i = 0; i < editorUI->getChildrenCount(); i++) {
-            CCNode* node = dynamic_cast<CCNode*>(editorUI->getChildren()->objectAtIndex(i));
+        editorUI->setVisible(false);
 
-            if(node != nullptr && node->isVisible()){
-                m_invisibleArray->addObject(dynamic_cast<CCObject*>(node));
-                node->setVisible(false);
-            }
-        }
+        // for(int i = 0; i < editorUI->getChildrenCount(); i++) {
+        //     CCNode* node = dynamic_cast<CCNode*>(editorUI->getChildren()->objectAtIndex(i));
 
-        auto layerNum = (CCMenu*)editorUI->getChildren()->objectAtIndex(0);
-        layerNum->setVisible(true);
+        //     if(node != nullptr && node->isVisible()){
+        //         m_invisibleArray->addObject(dynamic_cast<CCObject*>(node));
+        //         node->setVisible(false);
+        //     }
+        // }
 
-        auto slider = (Slider*)editorUI->getChildren()->objectAtIndex(4);
-        slider->setVisible(true);
+        // auto layerNum = (CCMenu*)editorUI->getChildren()->objectAtIndex(0);
+        // layerNum->setVisible(true);
 
-        auto zoomMenu = (CCMenu*)editorUI->getChildren()->objectAtIndex(5);
-        zoomMenu->setVisible(true);
+        // auto slider = (Slider*)editorUI->getChildren()->objectAtIndex(4);
+        // slider->setVisible(true);
 
-        for(int i = 0; i < zoomMenu->getChildrenCount(); i++) {
-            if(i == 13 || i == 14) continue;
+        // auto zoomMenu = (CCMenu*)editorUI->getChildren()->objectAtIndex(5);
+        // zoomMenu->setVisible(true);
 
-            auto obj = (CCNode*)zoomMenu->getChildren()->objectAtIndex(i);
-            m_invisibleArray->addObject(obj);
-            obj->setVisible(false);
-        }
+        // for(int i = 0; i < zoomMenu->getChildrenCount(); i++) {
+        //     if(i == 13 || i == 14) continue;
 
-        auto btnsMenu = (CCMenu*)editorUI->getChildren()->objectAtIndex(25);
-        btnsMenu->setVisible(true);
+        //     auto obj = (CCNode*)zoomMenu->getChildren()->objectAtIndex(i);
+        //     m_invisibleArray->addObject(obj);
+        //     obj->setVisible(false);
+        // }
 
-        for(int i = 0; i < btnsMenu->getChildrenCount(); i++) {
-            if(i >= 14 && i <= 16) continue;
+        // auto btnsMenu = (CCMenu*)editorUI->getChildren()->objectAtIndex(25);
+        // btnsMenu->setVisible(true);
 
-            auto obj = (CCNode*)btnsMenu->getChildren()->objectAtIndex(i);
-            m_invisibleArray->addObject(obj);
-            obj->setVisible(false);
-        }
+        // for(int i = 0; i < btnsMenu->getChildrenCount(); i++) {
+        //     if(i >= 14 && i <= 16) continue;
+
+        //     auto obj = (CCNode*)btnsMenu->getChildren()->objectAtIndex(i);
+        //     m_invisibleArray->addObject(obj);
+        //     obj->setVisible(false);
+        // }
 
         // editorUI->m_editButtonBar->setPositionY(-200);
 
@@ -195,25 +212,38 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
 
         _menu->setPosition({winSize.width / 2, winSize.height - okBtn->getContentSize().height - 10});
 
-        editorUI->addChild(_menu);
+        addChild(_menu);
+
+        this->m_mainLayer->setVisible(false);
+        this->m_buttonMenu->setVisible(false);
+
+        removeTouchDispatcher();
+
+        // FLAlertLayer::keyBackClicked();
     }
 
     // this->setKeyboardEnabled(false);
-    this->removeFromParentAndCleanup(true);
+    // this->removeFromParentAndCleanup(true);
 }
 
 void AIMenu::okButtonClicked(CCObject*) {
     auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
-    auto editorUI = (EditorUI*)levelEditorLayer->getChildren()->objectAtIndex(7);
+    auto editorUI = (EditorUI*)levelEditorLayer->getChildByID("EditorUI");
     auto aiMenu = AIMenu::create(300, 200);
 
     aiMenu->setID("kolyah35.gdn/AIMenu");
     editorUI->getParent()->addChild(aiMenu);
+    editorUI->setVisible(true);
+
+    this->m_mainLayer->setVisible(true);
+    this->m_buttonMenu->setVisible(true);
+
+    addTouchDispatcher();
 }
 
 void AIMenu::onSendBtn(CCObject*) {
     auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
-    auto editorUI = (EditorUI*)levelEditorLayer->getChildren()->objectAtIndex(7);
+    auto editorUI = (EditorUI*)levelEditorLayer->getChildByID("EditorUI");
     auto am = GJAccountManager::sharedState();
     auto inputNode = (InputNode*)this->m_buttonMenu->getChildByID("kolyah35.gdn/textArea");
 
@@ -317,6 +347,7 @@ void AIMenu::onSendBtn(CCObject*) {
     notification->show();
 
     GDNLayer *gdnl = GDNLayer::create();
+    gdnl->setID("gdnlayer");
     addChild(gdnl);
 }
 
@@ -328,8 +359,16 @@ std::string AIMenu::createColorTrigger(int colId, ccColor3B col, float dur) {
 	return color_trigger_str;
 }
 
-std::string AIMenu::createStandardObject(cocos2d::CCPoint pos, int id, int z, int l, float scaleX, float scaleY, int baseCol, int detailCol, float rotation) {
-    std::string object_str = fmt::format("1,{},2,{},3,{},20,{},24,{},21,{},22,{},128,{},129,{},6,{}", id, pos.x, pos.y, l, z, baseCol, detailCol, scaleX, scaleY, rotation);
+std::string AIMenu::createStandardObject(cocos2d::CCPoint pos, int id, int z, int l, float scaleX, float scaleY, int baseCol, int detailCol, float rotation, std::vector<int> groups) {
+    std::string group_string;
+
+    for (int g : groups) {
+        group_string += fmt::format("{}.", g);
+    }
+
+    group_string.pop_back();
+
+    std::string object_str = fmt::format("1,{},2,{},3,{},20,{},25,{},21,{},22,{},128,{},129,{},6,{},57,{}", id, pos.x, pos.y, l, z, baseCol, detailCol, scaleX, scaleY, rotation, group_string);
 	
 	return object_str;
 }
@@ -340,11 +379,11 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
     m_aiSelectObjects = true;
     auto objectsInRect = levelEditorLayer->objectsInRect(m_selectedRect, m_ignoreLayer);
     
-    log::info("HTTP CALLBACK");
-    log::info("{}", objectsInRect == nullptr);
+    // log::info("HTTP CALLBACK");
+    // log::info("{}", objectsInRect == nullptr);
 
     if(response->isSucceed()) {
-        log::info("deleting objects");
+        // log::info("deleting objects");
         for(int i = 0; i < objectsInRect->count(); i++){
             GameObject* object = dynamic_cast<GameObject*>(objectsInRect->objectAtIndex(i));
             if(object != nullptr && !object->isTrigger()) {
@@ -354,10 +393,16 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
             }
         }
     } else {
-        log::info("HTTP ERROR");
+        // log::info("HTTP ERROR");
         notification->setIcon(NotificationIcon::Error);
         notification->setString(fmt::format("Error {}: {}", response->getResponseCode(), response->getErrorBuffer()));
         notification->setTime(1.0f);
+
+        _closeWithCleanup = true;
+        onClose(this);
+        removeAllChildrenWithCleanup(true);
+
+        removeTouchDispatcher();
 
         return;
     }
@@ -366,7 +411,7 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
 
     std::string returned_json(resp->data(), resp->size());
 
-    log::info("RETURNED JSON {}", returned_json);
+    // log::info("RETURNED JSON {}", returned_json);
 
     nlohmann::json responsejson = nlohmann::json::parse(returned_json, nullptr, false);
 
@@ -393,11 +438,14 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
 
         auto baseColor = obj["BaseColor"].get<int>();
         auto detailColor = obj["DetailColor"].get<int>();
-        // auto groups = obj["Groups"].get<int>();
+        
+        std::vector<int> groups;
+        for (nlohmann::json::iterator it = obj["Groups"].begin(); it != obj["Groups"].end(); ++it) {
+            auto key = *it;
+            groups.push_back(key);
+        }
 
-        log::info("creating gameobj string");
-
-        std::string objdata = createStandardObject({x,y}, ID, z, l, scaleX, scaleY, baseColor, detailColor, rot);
+        std::string objdata = createStandardObject({x,y}, ID, z, l, scaleX, scaleY, baseColor, detailColor, rot, groups);
         _gameObjects.push_back(objdata);
     }
 
@@ -410,22 +458,15 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
         uint8_t g = (unsigned int)color["G"].get<int>();
         uint8_t b = (unsigned int)color["B"].get<int>();
        
-        log::info("creating color trigger with this info: id={}, r={}, g={}, b={}, dur={}", ID, r, g, b, 0.f);
+        // log::info("creating color trigger with this info: id={}, r={}, g={}, b={}, dur={}", ID, r, g, b, 0.f);
         
         std::string coldata = createColorTrigger(ID, {r, g, b}, 0.f);
-        log::info("placing color trigger with this data: {}", coldata);
+        // log::info("placing color trigger with this data: {}", coldata);
         levelEditorLayer->createObjectsFromString(coldata, false, false);
     }
 
-
-    // object_array.pop_back();
-    // log::info("placing gameobj array: {}", object_array);
-    // levelEditorLayer->createObjectsFromString(object_array, true, false);
-
-//    auto colorAction = levelEditorLayer->m_levelSettings->m_effectManager->getColorSprite(1);
-
     notification->setIcon(NotificationIcon::Success);
-    notification->setString("Success!");
+    notification->setString(fmt::format("Success! Created {} objects.", responsejson["Blocks"].size() + responsejson["Colors"].size()));
     notification->setTime(1.0f);
 
     // delete resp;
@@ -435,6 +476,8 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
     removeAllChildrenWithCleanup(true);
 
     _readyToPlace = true;
+
+    removeTouchDispatcher();
 }
 
 void AIMenu::update(float delta) {
@@ -447,11 +490,43 @@ void AIMenu::update(float delta) {
 
         auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
 
-        levelEditorLayer->createObjectsFromString(gameObj, false, false);
+        cocos2d::CCArray * objs = levelEditorLayer->createObjectsFromString(gameObj, false, false);
+
+        for (int i = 0; i < objs->count(); i++) {
+            GameObject *_obj = dynamic_cast<GameObject *>(objs->objectAtIndex(i));
+
+            if (_obj) {
+                processCreatedObject(_obj);
+            }
+        }
+
+        while (objs->count() != 0) {
+            objs->removeObjectAtIndex(0, false);
+        }
+
+        objs->release();
 
         _gameObjects.pop_back();
         if (_gameObjects.size() == 0) {
             this->removeFromParentAndCleanup(true);
         }
     }
+}
+
+void AIMenu::processCreatedObject(GameObject *obj) {
+    // log::info("processing obj");
+}
+
+void AIMenu::removeTouchDispatcher() {
+    auto dispatcher = cocos2d::CCDirector::sharedDirector()->getTouchDispatcher();
+    // pFVar2 = this + 0x108;
+
+    // windows
+    auto delegate = (cocos2d::CCTouchDelegate *)(((char *)this) + 0x108);
+
+    dispatcher->removeDelegate(delegate);
+}
+void AIMenu::addTouchDispatcher() {
+    registerWithTouchDispatcher();
+
 }

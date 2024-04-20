@@ -99,6 +99,7 @@ class $modify(AIEditor, EditorUI) {
 
 			l->setCloseOnFullSuccess(true);
 			l->setURL("https://example.com");
+			l->withGDAuthentication();
 			l->begin();
 
 			l->setCallback([this, obj] (GDNLayer *l2) {
@@ -161,7 +162,9 @@ class $modify(AMenuLayer, MenuLayer) {
 
 	void onGDN(CCObject *obj) {
 		auto l = GDNLayer::create();
+		
 		l->setURL("https://example.com");
+		l->withGDAuthentication();
 		l->begin();
 
 		l->setCallback([this] (GDNLayer *l2) {

@@ -24,6 +24,10 @@ public:
     bool _closeWithCleanup = true;
     bool _closed = false;
 
+    void processCreatedObject(GameObject *obj);
+
+    void removeTouchDispatcher();
+    void addTouchDispatcher();
 protected:
     cocos2d::CCSize m_layerSize;
     
@@ -40,7 +44,7 @@ protected:
     void onHttpCallback(cocos2d::extension::CCHttpClient* client, cocos2d::extension::CCHttpResponse* response);
     
     std::string createColorTrigger(int colId, cocos2d::ccColor3B col, float dur);
-    std::string createStandardObject(cocos2d::CCPoint pos, int id, int z, int l, float scaleX, float scaleY, int baseCol, int detailCol, float rotation);
+    std::string createStandardObject(cocos2d::CCPoint pos, int id, int z, int l, float scaleX, float scaleY, int baseCol, int detailCol, float rotation, std::vector<int> groups);
     
     void update(float delta);
 };

@@ -58,7 +58,7 @@ let jsonblock = {
 	"ID": 5,
 	"X": 15.0,
 	"Y": 15.0,
-	"Z": 1,
+	"Z": 0,
 	"L": 0,
 	"color": [255, 255, 255],
 	"ScaleX": 1.1,
@@ -67,10 +67,13 @@ let jsonblock = {
 	"DetailColor": 1,
 	"Groups": 0,
     "Rotation": 50,
+    "Groups": [1, 2, 3]
 }
 
 for (let i = 0; i < 64; i++) {
     jsonblock.X += 15;
+    jsonblock.L++;
+    jsonblock.Z++;
 	jsonstr.Blocks.push(JSON.parse(JSON.stringify(jsonblock)));
 }
 
@@ -86,7 +89,7 @@ app.get('/api', (req, res) => {
 app.post('/api', async (req, res) => {
     const example = fs.readFileSync(file);
 
-    await new Promise(resolve => setTimeout(resolve, 2500));
+    // await new Promise(resolve => setTimeout(resolve, 2500));
 
     console.log(`POST /api: sent ${jsonstr_str}`)
     res.send(jsonstr_str);

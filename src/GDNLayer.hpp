@@ -30,11 +30,18 @@ protected:
     bool _failed = false;
 
     FLAlertLayerProtocol *_protocol;
+
+    bool _requireGDA = false;
+
+    void beginGD();
+    void beginN();
 public:
     CREATE_FUNC(GDNLayer);
 
     void setURL(std::string url);
     void begin();
+    
+    void withGDAuthentication();
 
     // void setButtonProvider(FLAlertLayerProtocol *protocol);
 
@@ -55,6 +62,7 @@ public:
 
     void loginFailureMessage();
     static void sendAlert(std::string alert);
+    static void sendAlertWithOk(std::string alert);
     std::string getReturnedFailureMessage();
 
     std::string getReturnedData();
