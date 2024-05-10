@@ -10,6 +10,8 @@
 using namespace geode::prelude;
 // using namespace rapidjson;
 
+bool aimenu_exists = false;
+
 AIMenu* AIMenu::create(float w, float h, const char* spr) {
     auto pRet = new(std::nothrow) AIMenu();
     if(pRet && pRet->init(w, h, spr)) {
@@ -21,6 +23,8 @@ AIMenu* AIMenu::create(float w, float h, const char* spr) {
 }
 
 bool AIMenu::init(float w, float h, const char* spr) {
+    aimenu_exists = true;
+
     auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();
     this->m_layerSize = cocos2d::CCSize {w, h};
 
@@ -73,6 +77,7 @@ bool AIMenu::init(float w, float h, const char* spr) {
     scheduleUpdate();
 
     m_aiSelectObjects = false;
+    m_aiSelectObjects2 = false;
     m_aiMode = false;
 
     // show();
@@ -81,10 +86,19 @@ bool AIMenu::init(float w, float h, const char* spr) {
 }
 
 void AIMenu::onClose(cocos2d::CCObject*) {
+    if (m_aiSelectObjects2 == true) return;
+
+    aimenu_exists = false;
+
     auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
     auto editorUI = (EditorUI*)levelEditorLayer->getChildByID("EditorUI");
     auto okBtn = editorUI->getChildByIDRecursive("kolyah35.gdn/okBtn");
     auto gm = GameManager::sharedState();
+
+    CCMenuItemSpriteExtra *swipeBtn = dynamic_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
+    if (swipeBtn != nullptr) {
+        swipeBtn->activate();
+    }
 
     CCObject* obj;
     CCARRAY_FOREACH(m_invisibleArray, obj) {
@@ -108,14 +122,14 @@ void AIMenu::onClose(cocos2d::CCObject*) {
     // editorUI->m_selectedMode = m_currentMode;
     m_aiSelectObjects = false;
     m_ignoreLayer = false;
-    m_selectedRect = {0, 0, 0, 0};
+    // m_selectedRect = {0, 0, 0, 0};
     m_aiMode = false;
 
     // editorUI->m_editButtonBar->setPositionY(0);
 
     if(okBtn) okBtn->removeFromParent();
 
-    m_drawbox->clear();
+    // m_drawbox->clear();
 
     // this->setKeyboardEnabled(true);
     if (_closeWithCleanup) this->removeFromParentAndCleanup(true);
@@ -131,13 +145,34 @@ void AIMenu::setup() {
     selectBtn->setPosition(this->m_buttonMenu->convertToNodeSpace({winSize.width / 2, 235}));
 	this->m_buttonMenu->addChild(selectBtn);
 
-    auto textInput = geode::InputNode::create(260, "Your prompt...", "chatFont.fnt", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-!?:;)(/\\\"'`*=+-_%[]<>|@&^#{}%$~", 200);
+    auto textInput = geode::InputNode::create(260, "Enter prompt...", "chatFont.fnt", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-!?:;)(/\\\"'`*=+-_%[]<>|@&^#{}%$~", 200);
     textInput->setID("kolyah35.gdn/textArea");
     this->m_buttonMenu->addChild(textInput);
 
 	auto sendBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Send"), this, SEL_MenuHandler(&AIMenu::onSendBtn));
 	sendBtn->setPosition(this->m_buttonMenu->convertToNodeSpace({winSize.width / 2, 85}));
 	this->m_buttonMenu->addChild(sendBtn);
+}
+
+void AIMenu::keyBackClicked() {
+    if (m_aiSelectObjects2) return;
+
+    aimenu_exists = false;
+
+    auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
+    auto editorUI = (EditorUI*)levelEditorLayer->getChildByID("EditorUI");
+
+    CCMenuItemSpriteExtra *swipeBtn = dynamic_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
+    if (swipeBtn != nullptr) {
+        swipeBtn->activate();
+    }
+
+    // m_selectedRect = {0, 0, 0, 0};
+    m_aiMode = false;
+
+    // m_drawbox->clear();
+
+    FLAlertLayer::keyBackClicked();
 }
 
 void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
@@ -151,6 +186,9 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
 
 
     if(!m_aiMode){
+        m_aiSelectObjects = true;
+        m_aiSelectObjects2 = true;
+
         m_invisibleArray->removeAllObjects();
 
         editorUI->setVisible(false);
@@ -219,6 +257,11 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
 
         removeTouchDispatcher();
 
+        CCMenuItemSpriteExtra *swipeBtn = dynamic_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
+        if (swipeBtn != nullptr) {
+            swipeBtn->activate();
+        }
+
         // FLAlertLayer::keyBackClicked();
     }
 
@@ -231,14 +274,19 @@ void AIMenu::okButtonClicked(CCObject*) {
     auto editorUI = (EditorUI*)levelEditorLayer->getChildByID("EditorUI");
     auto aiMenu = AIMenu::create(300, 200);
 
+    m_aiSelectObjects = false;
+    m_aiSelectObjects2 = false;
+
+    removeMeAndCleanup();
+
     aiMenu->setID("kolyah35.gdn/AIMenu");
     editorUI->getParent()->addChild(aiMenu);
     editorUI->setVisible(true);
 
-    this->m_mainLayer->setVisible(true);
-    this->m_buttonMenu->setVisible(true);
+    // this->m_mainLayer->setVisible(true);
+    // this->m_buttonMenu->setVisible(true);
 
-    addTouchDispatcher();
+    // addTouchDispatcher();
 }
 
 void AIMenu::onSendBtn(CCObject*) {

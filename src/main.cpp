@@ -29,19 +29,20 @@
 
 using namespace geode::prelude;
 
-class REMessage {
-public:
+namespace REMessage {
 	void run() {
 		printf("hello reverse engineers welcome to the game\n");
 	}
 };
 
 namespace AISettings {
-	REMessage reMessage;
 	bool loginSuccessful = false;
 	bool attemptedToLogin = false;
 	std::string failureReason;
+	bool loginRequested = false;
 }
+
+extern bool aimenu_exists;
 
 class $modify(AIEditor, EditorUI) {
 	bool init(LevelEditorLayer* editor) {
@@ -84,6 +85,9 @@ class $modify(AIEditor, EditorUI) {
 	}
 
 	void onAI(CCObject* obj) {
+		if (aimenu_exists) return;
+		if (AISettings::loginRequested) return;
+
 		if (AISettings::attemptedToLogin) {
 			if (!AISettings::loginSuccessful) {
 				// GDNLayer::loginFailureMessage();
@@ -95,6 +99,8 @@ class $modify(AIEditor, EditorUI) {
 				this->getParent()->addChild(aiMenu);
 			}
 		} else {
+			AISettings::loginRequested = true;
+
 			auto l = GDNLayer::create();
 
 			l->setCloseOnFullSuccess(true);
@@ -103,6 +109,7 @@ class $modify(AIEditor, EditorUI) {
 			l->begin();
 
 			l->setCallback([this, obj] (GDNLayer *l2) {
+				AISettings::loginRequested = false;
 				AISettings::loginSuccessful = !l2->isFailed();
 				AISettings::attemptedToLogin = true;
 				if (!AISettings::loginSuccessful) {
@@ -161,6 +168,10 @@ class $modify(AMenuLayer, MenuLayer) {
 	}
 
 	void onGDN(CCObject *obj) {
+		if (AISettings::loginRequested) return;
+
+		AISettings::loginRequested = true;
+
 		auto l = GDNLayer::create();
 		
 		l->setURL("https://example.com");
@@ -173,6 +184,7 @@ class $modify(AMenuLayer, MenuLayer) {
 			if (!AISettings::loginSuccessful) {
 				AISettings::failureReason = l2->getReturnedFailureMessage();
 			}
+			AISettings::loginRequested = false;
 		});
 
 		addChild(l, 100);
@@ -195,29 +207,29 @@ class $modify(ALevelEditorLayer, LevelEditorLayer){
 		return true;
 	}
 
-	void hideEditorButtons() {
-		auto menu = this->m_editorUI->getChildByID("editor-buttons-menu");
+	// void hideEditorButtons() {
+	// 	auto menu = this->m_editorUI->getChildByID("editor-buttons-menu");
 
-		menu->setVisible(false);
-	}
-	void showEditorButtons() {
-		auto menu = this->m_editorUI->getChildByID("editor-buttons-menu");
+	// 	menu->setVisible(false);
+	// }
+	// void showEditorButtons() {
+	// 	auto menu = this->m_editorUI->getChildByID("editor-buttons-menu");
 
-		menu->setVisible(true);
-	}
+	// 	menu->setVisible(true);
+	// }
 
-	void onPausePlaytest() {
-		LevelEditorLayer::onPausePlaytest();
-		showEditorButtons();
-	}
-	void onPlaytest() {
-		LevelEditorLayer::onPlaytest();
-		hideEditorButtons();
-	}
-	void onResumePlaytest() {
-		LevelEditorLayer::onResumePlaytest();
-		hideEditorButtons();
-	}
+	// void onPausePlaytest() {
+	// 	LevelEditorLayer::onPausePlaytest();
+	// 	showEditorButtons();
+	// }
+	// void onPlaytest() {
+	// 	LevelEditorLayer::onPlaytest();
+	// 	hideEditorButtons();
+	// }
+	// void onResumePlaytest() {
+	// 	LevelEditorLayer::onResumePlaytest();
+	// 	hideEditorButtons();
+	// }
 
 	CCArray* objectsInRect(cocos2d::CCRect rect, bool ignoreLayer) {
 		if(AIMenu::m_aiMode && !AIMenu::m_aiSelectObjects) {
