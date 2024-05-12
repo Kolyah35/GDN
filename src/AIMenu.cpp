@@ -85,6 +85,8 @@ bool AIMenu::init(float w, float h, const char* spr) {
     return true;
 }
 
+#include "GDNGlobal.hpp"
+
 void AIMenu::onClose(cocos2d::CCObject*) {
     if (m_aiSelectObjects2 == true) return;
 
@@ -95,10 +97,11 @@ void AIMenu::onClose(cocos2d::CCObject*) {
     auto okBtn = editorUI->getChildByIDRecursive("kolyah35.gdn/okBtn");
     auto gm = GameManager::sharedState();
 
-    CCMenuItemSpriteExtra *swipeBtn = dynamic_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
-    if (swipeBtn != nullptr) {
-        swipeBtn->activate();
-    }
+    // CCMenuItemSpriteExtra *swipeBtn = dynamic_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
+    
+    // if (swipeBtn != nullptr) {
+    //     swipeBtn->activate(); 
+    // }
 
     CCObject* obj;
     CCARRAY_FOREACH(m_invisibleArray, obj) {
@@ -258,8 +261,43 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
         removeTouchDispatcher();
 
         CCMenuItemSpriteExtra *swipeBtn = dynamic_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
+        
         if (swipeBtn != nullptr) {
-            swipeBtn->activate();
+            auto btnsprv = GDNGlobal::findInstancesOfObj<ButtonSprite>(swipeBtn);
+
+            if (btnsprv.size() == 0) {
+                log::info("ButtonSprite cannot be found inside swipe button");
+
+                swipeBtn->activate();
+            } else {
+                ButtonSprite *btnspr = btnsprv[0];
+
+                CCSprite *bg = btnspr->m_subBGSprite;
+                
+                // definetely not stolen from devtools
+                if (auto textureProtocol = typeinfo_cast<CCTextureProtocol*>(bg)) {
+                    if (auto texture = textureProtocol->getTexture()) {
+                        auto* cachedTextures = CCTextureCache::sharedTextureCache()->m_pTextures;
+                        for (auto [key, obj] : CCDictionaryExt<std::string, CCTexture2D*>(cachedTextures)) {
+                            if (obj == texture) {
+                                
+                                if (key.find("GJ_button_01") != std::string::npos) {
+                                    swipeBtn->activate();
+                                    log::info("activating swipe");
+                                } else {
+                                    log::info("swipe is already has been activated");
+                                }
+
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    log::info("bg is not texture protocol");
+
+                    swipeBtn->activate();
+                }
+            }
         }
 
         // FLAlertLayer::keyBackClicked();
@@ -432,14 +470,14 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
 
     if(response->isSucceed()) {
         // log::info("deleting objects");
-        for(int i = 0; i < objectsInRect->count(); i++){
-            GameObject* object = dynamic_cast<GameObject*>(objectsInRect->objectAtIndex(i));
-            if(object != nullptr && !object->isTrigger()) {
-                levelEditorLayer->removeObject(object, true);
-                objectsInRect->removeObject(objectsInRect->objectAtIndex(i), false);
-                i--;
-            }
-        }
+        // for(int i = 0; i < objectsInRect->count(); i++){
+        //     GameObject* object = dynamic_cast<GameObject*>(objectsInRect->objectAtIndex(i));
+        //     if(object != nullptr && !object->isTrigger()) {
+        //         levelEditorLayer->removeObject(object, true);
+        //         objectsInRect->removeObject(objectsInRect->objectAtIndex(i), false);
+        //         i--;
+        //     }
+        // }
     } else {
         // log::info("HTTP ERROR");
         notification->setIcon(NotificationIcon::Error);
@@ -558,11 +596,24 @@ void AIMenu::update(float delta) {
         if (_gameObjects.size() == 0) {
             this->removeFromParentAndCleanup(true);
         }
+    } else {
+        // if (_createdObjects.size() > 0) {
+        //     processObjectsGlobally();
+
+        //     _createdObjects.clear();
+        // }
     }
 }
 
 void AIMenu::processCreatedObject(GameObject *obj) {
     // log::info("processing obj");
+
+    // _createdObjects.push_back(obj);
+
+    auto lel = LevelEditorLayer::get();
+
+    UndoObject *undo = UndoObject::create(obj, UndoCommand::New);
+    lel->m_undoObjects->addObject(undo);
 }
 
 void AIMenu::removeTouchDispatcher() {
@@ -577,4 +628,19 @@ void AIMenu::removeTouchDispatcher() {
 void AIMenu::addTouchDispatcher() {
     registerWithTouchDispatcher();
 
+}
+
+void AIMenu::processObjectsGlobally() {
+    log::info("applying undo action to {} objects", _createdObjects.size());
+
+    CCArray *array = CCArray::create();
+
+    for (GameObject *obj : _createdObjects) {
+        array->addObject(obj);
+    }
+
+    auto lel = LevelEditorLayer::get();
+
+    UndoObject *undo = UndoObject::createWithArray(array, UndoCommand::New);
+    lel->m_undoObjects->addObject(undo);
 }

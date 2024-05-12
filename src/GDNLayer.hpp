@@ -22,13 +22,6 @@ protected:
     std::string _returnedData;
     std::string _url;
 
-    std::string _success;
-    
-    std::string _failure;
-    std::string _returnedFailure;
-
-    bool _failed = false;
-
     FLAlertLayerProtocol *_protocol;
 
     bool _requireGDA = false;
@@ -36,6 +29,12 @@ protected:
     void beginGD();
     void beginN();
 public:
+    static cocos2d::CCScene *_workingScene;
+    static std::string _failure;
+    static std::string _returnedFailure;
+    static std::string _success;
+    static bool _failed;
+
     CREATE_FUNC(GDNLayer);
 
     void setURL(std::string url);

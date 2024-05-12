@@ -20,12 +20,16 @@ public:
 
     static AIMenu* create(float w, float h, const char* spr = "GJ_square01.png");
 
-    std::vector<std::string> _gameObjects;
+    std::vector<std::string> _gameObjects = {};
     bool _readyToPlace = false;
     bool _closeWithCleanup = true;
     bool _closed = false;
 
+    std::vector<GameObject *> _createdObjects = {};
+
     void processCreatedObject(GameObject *obj);
+
+    void processObjectsGlobally();
 
     void removeTouchDispatcher();
     void addTouchDispatcher();

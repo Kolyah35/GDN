@@ -6,6 +6,20 @@
 
 using namespace geode::prelude;
 
+cocos2d::CCScene *GDNLayer::_workingScene = nullptr;
+
+/**
+ * static std::string _failure;
+    static std::string _returnedFailure;
+    static std::string _success;
+    static bool _failed;
+*/
+
+std::string GDNLayer::_failure = "You are not <cp>registered in GD Neural.</c> Do you want to <cy>join</c> GDN's <cj>Discord server</c>?";
+std::string GDNLayer::_returnedFailure = "";
+std::string GDNLayer::_success = "Success! <cg>Access granted.</c>";
+bool GDNLayer::_failed = false;
+
 bool GDNLayer::init() {
     _protocol = this;
     _failure = "You are not <cp>registered in GD Neural.</c> Do you want to <cy>join</c> GDN's <cj>Discord server</c>?";
@@ -38,10 +52,16 @@ bool GDNLayer::init() {
 
     addChild(l, 1024);
 
+    _workingScene = cocos2d::CCScene::get();
+
     return true;
 }
 
 void GDNLayer::close() {
+    auto scene = cocos2d::CCScene::get();
+
+    if (_workingScene != scene) return;
+
     _circle->removeMeAndCleanup();
     _bg->runAction(cocos2d::CCFadeTo::create(0.15f, 0));
     
