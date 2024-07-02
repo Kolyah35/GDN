@@ -7,6 +7,7 @@
 
 #include "AIMenu.hpp"
 #include "GDNLayer.hpp"
+#include "GDNGlobal.hpp"
 
 /*
 	ОСТОРОЖНО! ЩИТКОД
@@ -29,9 +30,168 @@
 
 using namespace geode::prelude;
 
+CCArray *GDNGlobal::selectedObjects = nullptr;
+GJBaseGameLayer *GDNGlobal::baseGameLayer = nullptr;
+std::array<gd::string, 595> GDNGlobal::tempArray1;
+std::array<void *, 595> GDNGlobal::tempArray2;
+
+void GDNGlobal::accessSelectedObjects() {
+	if (selectedObjects == nullptr) {
+		selectedObjects = CCArray::create();
+		selectedObjects->retain();
+	}
+}
+void GDNGlobal::clearArrayWithoutCleanup(CCArray *array) {
+	while (array->count() != 0) {
+		array->removeObjectAtIndex(0, false);
+	}
+}
+cocos2d::CCRect GDNGlobal::createOriginRect(std::vector<GameObject *> &objects) {
+	float min_x; float min_y;
+	float max_x; float max_y;
+
+	std::vector<float> x_vec;
+	std::vector<float> y_vec;
+
+	CCRect rect = {};
+
+	if (objects.size() == 0) return rect;
+
+	for (GameObject *game_object : objects) {
+		x_vec.push_back(game_object->getPositionX());
+		y_vec.push_back(game_object->getPositionY());
+	}
+
+	min_x = *(std::min_element(x_vec.begin(), x_vec.end()));
+	min_y = *(std::min_element(y_vec.begin(), y_vec.end()));
+
+	max_x = *(std::max_element(x_vec.begin(), x_vec.end()));
+	max_y = *(std::max_element(y_vec.begin(), y_vec.end()));
+
+	log::info("min_x={}; min_y={}; max_x={}; max_y={};", min_x, min_y, max_x, max_y);
+
+	rect.origin.x = min_x;
+	rect.origin.y = min_y;
+	rect.size.width = max_x - min_x;
+	rect.size.height = max_y - min_y;
+
+	return rect;
+}
+std::vector<GameObject *> GDNGlobal::copyObjectsWithRelativePos() {
+	std::vector<GameObject *> result = {};
+
+	float min_x;
+	float min_y;
+
+	std::vector<float> x_vec;
+	std::vector<float> y_vec;
+
+	accessSelectedObjects();
+
+	for (int i = 0; i < selectedObjects->count(); i++) {
+		CCObject *base_object = selectedObjects->objectAtIndex(i);
+		GameObject *game_object = typeinfo_cast<GameObject *>(base_object);
+
+		if (game_object == nullptr) continue;	
+
+		GameObject *new_object = copyGameObject(game_object);
+		new_object->retain();
+
+		result.push_back(new_object);
+
+		x_vec.push_back(game_object->getPositionX());
+		y_vec.push_back(game_object->getPositionY());
+	}
+
+	if (result.size() == 0) return result;
+
+	min_x = *(std::min_element(x_vec.begin(), x_vec.end()));
+	min_y = *(std::min_element(y_vec.begin(), y_vec.end()));
+
+	log::info("min_x={}; min_y={}", min_x, min_y);
+
+	for (GameObject *ref : result) {
+		auto pos = ref->getPosition();
+			
+		pos.x -= min_x;
+		pos.y -= min_y - 90.f;
+
+		ref->setPosition(pos);
+	}
+
+	return result;
+}
+GameObject *GDNGlobal::copyGameObject(GameObject *_obj) {
+	if (!_obj) return nullptr;
+
+	tempArray1.fill("");
+	tempArray2.fill(nullptr);
+
+	std::string object_string = _obj->getSaveString(baseGameLayer);
+
+	std::map<int, std::string> object_map = parseObjectData(object_string);
+
+	for (auto [k, v] : object_map) {
+		tempArray1[k] = v;
+		tempArray2[k] = baseGameLayer;
+	}
+
+	std::vector v1(tempArray1.begin(), tempArray1.end());
+	std::vector v2(tempArray2.begin(), tempArray2.end());
+
+	GameObject *new_object = GameObject::objectFromVector(
+		v1, v2, baseGameLayer, false
+	);
+
+	return new_object;
+}
+std::vector<std::string> GDNGlobal::splitString(const char *str, char d) {
+	std::vector<std::string> result;
+
+	do {
+		const char *begin = str;
+
+		while(*str != d && *str) str++;
+
+		result.push_back(std::string(begin, str));
+	} while (0 != *str++);
+
+	return result;
+}
+
+std::map<int, std::string> GDNGlobal::parseObjectData(std::string &object_string) {
+	std::vector<std::string> data = splitString(object_string.data(), ',');
+
+	std::map<int, std::string> object_map;
+
+	bool _key = true;
+
+	int key;
+	std::string value; 
+
+	for (std::string el : data) {
+		if (_key) {
+			key = std::stoi(el);
+		} else {
+			value = el;
+
+			object_map[key] = value;
+		}
+
+		_key = !_key;
+	}
+
+	return object_map;
+}
+void GDNGlobal::deleteObjectVector(std::vector<GameObject *> &objects) {
+	for (GameObject *obj : objects) {
+		obj->release();
+	}
+}
+
 namespace REMessage {
-	void run() {
-		printf("hello reverse engineers welcome to the game\n");
+	static void run() {
+		printf("hello internet! welcome to the game\n");
 	}
 };
 
@@ -52,7 +212,7 @@ class $modify(AIEditor, EditorUI) {
 
 		auto btn_spr = EditorButtonSprite::createWithSprite(
 			"gdn2.png"_spr,
-			0.5f,
+			1.f,
 			EditorBaseColor::Gray,
 			EditorBaseSize::Normal
 		);
@@ -84,6 +244,94 @@ class $modify(AIEditor, EditorUI) {
 		return true;
 	}
 
+	void reloadDrawbox() {
+		AIMenu::m_drawbox->clear();
+
+		auto objects = GDNGlobal::convertArrayIntoVector<GameObject>(GDNGlobal::selectedObjects);
+		auto rect = GDNGlobal::createOriginRect(objects);
+
+		rect.origin.x = floorf(rect.origin.x - ALIGN(rect.origin.x));
+		rect.origin.y = floorf(rect.origin.y - ALIGN(rect.origin.y));
+		rect.size.width += (30 - ALIGN(rect.size.width));
+		rect.size.height += (30 - ALIGN(rect.size.height));
+
+		CCPoint rectangle[4] = {
+			{rect.origin.x, rect.origin.y},
+			{rect.origin.x + rect.size.width, rect.origin.y},
+			{rect.origin.x + rect.size.width, rect.origin.y + rect.size.height},
+			{rect.origin.x, rect.origin.y + rect.size.height}
+		};
+
+		AIMenu::m_drawbox->drawPolygon(rectangle, 4, {0.0f, 0.0f, 0.0f, 0.0f}, 1.0f, {1.0f, 1.0f, 0.0f, 1.0f});
+	}
+
+	void selectObject(GameObject *obj, bool p1) {
+		log::info("hook! p1={}", p1);
+
+		EditorUI::selectObject(obj, p1);
+
+		GDNGlobal::accessSelectedObjects();
+		GDNGlobal::clearArrayWithoutCleanup(GDNGlobal::selectedObjects);
+
+		if (m_selectedObjects->count() == 0) {
+			GDNGlobal::selectedObjects->addObject(obj);
+		}
+
+		// if(AIMenu::m_aiMode && !AIMenu::m_aiSelectObjects) {
+			reloadDrawbox();
+		// }
+	}
+
+	void selectObjects(CCArray *p0, bool p1) {
+		log::info("hook! p0={}; p1={}", p0->count(), p1);
+
+		EditorUI::selectObjects(p0, p1);
+		
+		GDNGlobal::accessSelectedObjects();
+		GDNGlobal::clearArrayWithoutCleanup(GDNGlobal::selectedObjects);
+
+		GDNGlobal::selectedObjects->addObjectsFromArray(m_selectedObjects);
+
+		// if(AIMenu::m_aiMode && !AIMenu::m_aiSelectObjects) {
+			reloadDrawbox();
+		// }
+	}
+
+	void deselectAll() {
+		EditorUI::deselectAll();
+
+		GDNGlobal::accessSelectedObjects();
+		GDNGlobal::clearArrayWithoutCleanup(GDNGlobal::selectedObjects);
+
+		log::info("EditorUI::deselectAll();");
+
+		// if(AIMenu::m_aiMode && !AIMenu::m_aiSelectObjects) {
+			reloadDrawbox();
+		// }
+	}
+
+	void deselectObject(GameObject *p0) {
+		EditorUI::deselectObject(p0);
+
+		GDNGlobal::accessSelectedObjects();
+
+		if (GDNGlobal::selectedObjects->containsObject(p0)) {
+			GDNGlobal::selectedObjects->removeObject(p0, false);
+		}
+
+		// auto position = p0->getRealPosition();
+		// auto structures = GDNGlobal::getStructuresOnPosition(position);
+
+		// log::info("found {} structures", structures.size());
+
+		// if (structures.size() != 0) {
+		// 	for (struct GDNGlobal::CollectionStructure &structure : structures) {
+		// 		GDNGlobal::removeStructureFromList(structure);
+		// 	}
+		// }
+		// log::info("EditorUI::deselectObject({}); | Pos={}", p0, p0->getRealPosition());
+	}
+
 	void onAI(CCObject* obj) {
 		if (aimenu_exists) return;
 		if (AISettings::loginRequested) return;
@@ -105,7 +353,7 @@ class $modify(AIEditor, EditorUI) {
 
 			l->setCloseOnFullSuccess(true);
 			l->setURL("https://example.com");
-			l->withGDAuthentication();
+			// l->withGDAuthentication();
 			l->begin();
 
 			l->setCallback([this, obj] (GDNLayer *l2) {
@@ -138,7 +386,7 @@ class $modify(AMenuLayer, MenuLayer) {
 
 		auto btn_spr = CircleButtonSprite::createWithSprite(
 			"gdn2.png"_spr,
-			1.0f,
+			0.8f,
 			CircleBaseColor::Green,
 			CircleBaseSize::MediumAlt
 		);
@@ -204,33 +452,12 @@ class $modify(ALevelEditorLayer, LevelEditorLayer){
 		AIMenu::m_drawbox->setZOrder(1000);
 		this->m_objectLayer->addChild(AIMenu::m_drawbox);
 
+		GDNGlobal::baseGameLayer = this;
+
 		return true;
 	}
 
-	// void hideEditorButtons() {
-	// 	auto menu = this->m_editorUI->getChildByID("editor-buttons-menu");
-
-	// 	menu->setVisible(false);
-	// }
-	// void showEditorButtons() {
-	// 	auto menu = this->m_editorUI->getChildByID("editor-buttons-menu");
-
-	// 	menu->setVisible(true);
-	// }
-
-	// void onPausePlaytest() {
-	// 	LevelEditorLayer::onPausePlaytest();
-	// 	showEditorButtons();
-	// }
-	// void onPlaytest() {
-	// 	LevelEditorLayer::onPlaytest();
-	// 	hideEditorButtons();
-	// }
-	// void onResumePlaytest() {
-	// 	LevelEditorLayer::onResumePlaytest();
-	// 	hideEditorButtons();
-	// }
-
+#ifndef _WIN32
 	CCArray* objectsInRect(cocos2d::CCRect rect, bool ignoreLayer) {
 		if(AIMenu::m_aiMode && !AIMenu::m_aiSelectObjects) {
 			AIMenu::m_drawbox->clear();
@@ -248,7 +475,7 @@ class $modify(ALevelEditorLayer, LevelEditorLayer){
 			};
 
 			AIMenu::m_drawbox->drawPolygon(rectangle, 4, {0.0f, 0.0f, 0.0f, 0.0f}, 1.0f, {1.0f, 1.0f, 0.0f, 1.0f});
-			AIMenu::m_selectedRect = rect;
+			// AIMenu::m_selectedRect = rect;
 			AIMenu::m_ignoreLayer = ignoreLayer;
 			
 			return CCArray::create();
@@ -257,6 +484,7 @@ class $modify(ALevelEditorLayer, LevelEditorLayer){
 			return LevelEditorLayer::objectsInRect(rect, ignoreLayer);
 		}
 	}
+#endif
 };
 
 // class MySettingValue : StringSettingValue {

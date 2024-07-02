@@ -5,13 +5,21 @@
 #include <functional>
 #include <Geode/binding/FLAlertLayerProtocol.hpp>
 #include "LoadingCircleLayer.hpp"
+#include <Geode/utils/web.hpp>
 
 class GDNLayerProtocol : public FLAlertLayerProtocol {
     void FLAlert_Clicked(FLAlertLayer *l, bool idk) override;
 };
 
 class GDNLayer : public cocos2d::CCLayer, public GDNLayerProtocol {
+public:
+    enum AuthService {
+        GeometryDash,
+        GDNetwork
+    };
 protected:
+    enum AuthService _currentService;
+
     LoadingCircleLayer *_circle;
     cocos2d::CCSprite *_bg;
 
@@ -26,8 +34,14 @@ protected:
 
     bool _requireGDA = false;
 
+    geode::EventListener<geode::utils::web::WebTask> _listener;
+
+    bool _networkInstalled = false;
+
     void beginGD();
     void beginN();
+
+    void setupNetworking();
 public:
     static cocos2d::CCScene *_workingScene;
     static std::string _failure;

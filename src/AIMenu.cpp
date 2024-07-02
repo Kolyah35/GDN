@@ -4,6 +4,7 @@
 #include <Geode/utils/web.hpp>
 #include <nlohmann/json.hpp>
 #include "GDNLayer.hpp"
+#include "GDNGlobal.hpp"
 
 #undef GetObject
 
@@ -97,7 +98,7 @@ void AIMenu::onClose(cocos2d::CCObject*) {
     auto okBtn = editorUI->getChildByIDRecursive("kolyah35.gdn/okBtn");
     auto gm = GameManager::sharedState();
 
-    // CCMenuItemSpriteExtra *swipeBtn = dynamic_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
+    // CCMenuItemSpriteExtra *swipeBtn = typeinfo_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
     
     // if (swipeBtn != nullptr) {
     //     swipeBtn->activate(); 
@@ -105,7 +106,7 @@ void AIMenu::onClose(cocos2d::CCObject*) {
 
     CCObject* obj;
     CCARRAY_FOREACH(m_invisibleArray, obj) {
-        CCNode* node = dynamic_cast<CCNode*>(obj);
+        CCNode* node = typeinfo_cast<CCNode*>(obj);
         if (node) {
             node->setVisible(true);
         }
@@ -113,7 +114,7 @@ void AIMenu::onClose(cocos2d::CCObject*) {
 
     // gm->setGameVariable("0003", m_swipeEnabled);
     // if(!gm->getGameVariable("0003")) {
-    //     auto menu = dynamic_cast<CCMenu *>(editorUI->getChildren()->objectAtIndex(5));
+    //     auto menu = typeinfo_cast<CCMenu *>(editorUI->getChildren()->objectAtIndex(5));
     //     if (menu) {
     //         auto swipeBtn = menu->getChildren()->objectAtIndex(3);
     //         if (swipeBtn) {
@@ -144,9 +145,9 @@ void AIMenu::setup() {
 	this->setZOrder(101);
     auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();	
     
-    auto selectBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Select Area"), this, cocos2d::SEL_MenuHandler(&AIMenu::selectAreaClicked));
-    selectBtn->setPosition(this->m_buttonMenu->convertToNodeSpace({winSize.width / 2, 235}));
-	this->m_buttonMenu->addChild(selectBtn);
+    // auto selectBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Select Area"), this, cocos2d::SEL_MenuHandler(&AIMenu::selectAreaClicked));
+    // selectBtn->setPosition(this->m_buttonMenu->convertToNodeSpace({winSize.width / 2, 235}));
+	// this->m_buttonMenu->addChild(selectBtn);
 
     auto textInput = geode::InputNode::create(260, "Enter prompt...", "chatFont.fnt", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-!?:;)(/\\\"'`*=+-_%[]<>|@&^#{}%$~", 200);
     textInput->setID("kolyah35.gdn/textArea");
@@ -165,7 +166,7 @@ void AIMenu::keyBackClicked() {
     auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
     auto editorUI = (EditorUI*)levelEditorLayer->getChildByID("EditorUI");
 
-    CCMenuItemSpriteExtra *swipeBtn = dynamic_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
+    CCMenuItemSpriteExtra *swipeBtn = typeinfo_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
     if (swipeBtn != nullptr) {
         swipeBtn->activate();
     }
@@ -197,10 +198,10 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
         editorUI->setVisible(false);
 
         // for(int i = 0; i < editorUI->getChildrenCount(); i++) {
-        //     CCNode* node = dynamic_cast<CCNode*>(editorUI->getChildren()->objectAtIndex(i));
+        //     CCNode* node = typeinfo_cast<CCNode*>(editorUI->getChildren()->objectAtIndex(i));
 
         //     if(node != nullptr && node->isVisible()){
-        //         m_invisibleArray->addObject(dynamic_cast<CCObject*>(node));
+        //         m_invisibleArray->addObject(typeinfo_cast<CCObject*>(node));
         //         node->setVisible(false);
         //     }
         // }
@@ -260,7 +261,7 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
 
         removeTouchDispatcher();
 
-        CCMenuItemSpriteExtra *swipeBtn = dynamic_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
+        CCMenuItemSpriteExtra *swipeBtn = typeinfo_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
         
         if (swipeBtn != nullptr) {
             auto btnsprv = GDNGlobal::findInstancesOfObj<ButtonSprite>(swipeBtn);
@@ -334,44 +335,30 @@ void AIMenu::onSendBtn(CCObject*) {
     auto inputNode = (InputNode*)this->m_buttonMenu->getChildByID("kolyah35.gdn/textArea");
 
     m_aiSelectObjects = true;
-    auto objectsInRect = levelEditorLayer->objectsInRect(m_selectedRect, m_ignoreLayer);
+    GDNGlobal::accessSelectedObjects();
+    auto objectsInRect = GDNGlobal::selectedObjects;
 
     nlohmann::json data;
 
     nlohmann::json userobj;
-
-    // Document data;
-    // data.SetObject();
-
-    // auto allocator = data.GetAllocator();
-
-    // Value userobj;
-    // userobj.SetObject();
-
-    // Value username;
-    // username.SetString(am->m_username.c_str(), am->m_username.size());
-    // userobj.AddMember("UserName", username, allocator);
-
-    // Value prompt;
-    // prompt.SetString(inputNode->getString().c_str(), inputNode->getString().length());
-    // userobj.AddMember("Prompt", prompt, allocator);
-
-    // data.AddMember("User", userobj, allocator);
 
     userobj["UserName"] = am->m_username;
     userobj["Prompt"] = inputNode->getString();
 
     data["User"] = userobj;
 
-    // Value blocks;
-    // blocks.SetArray();
-
     nlohmann::json blocks = nlohmann::json::array();
+
+    {
+        auto obj_vec = GDNGlobal::convertArrayIntoVector<GameObject>(GDNGlobal::selectedObjects);
+        
+        m_selectedRect = GDNGlobal::createOriginRect(obj_vec);
+    }
 
     for(int i = 0; i < objectsInRect->count(); i++) {
         nlohmann::json bdata;
 
-        auto object = dynamic_cast<GameObject*>(objectsInRect->objectAtIndex(i));
+        auto object = typeinfo_cast<GameObject*>(objectsInRect->objectAtIndex(i));
 
         bdata["ID"] = object->m_objectID;
         bdata["X"] = (int)(object->getPositionX() - m_selectedRect.origin.x);
@@ -382,12 +369,6 @@ void AIMenu::onSendBtn(CCObject*) {
         bdata["ScaleY"] = object->m_scaleY;
         bdata["ScaleX"] = object->m_scaleX;
         bdata["Rotation"] = object->getRotation();
-
-        // nlohmann::json color;
-
-        // for(int i = 0; i < object->m_colorGroupCount; i++) {
-        //     color.push_back(object->m_colorGroups->at(i))
-        // }
 
         if(object->m_baseColor) {;
             bdata["BaseColor"] = (int)object->m_baseColor->m_colorID;
@@ -400,9 +381,6 @@ void AIMenu::onSendBtn(CCObject*) {
         nlohmann::json groups = nlohmann::json::array();
 
         for(int i = 0; i < object->m_groupCount; i++) {
-            // Value id;
-            // id.SetInt(object->m_groups->at(i));
-            // groups.PushBack(id, data.GetAllocator());
             groups.push_back(object->m_groups->at(i));
         }
 
@@ -463,19 +441,26 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
     auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
     // auto notification = (Notification*)this->getChildByIDRecursive("kolyah35.gdn/notification");
     m_aiSelectObjects = true;
-    auto objectsInRect = levelEditorLayer->objectsInRect(m_selectedRect, m_ignoreLayer);
+    GDNGlobal::accessSelectedObjects();
+    auto objectsInRect = GDNGlobal::selectedObjects;
     
     // log::info("HTTP CALLBACK");
     // log::info("{}", objectsInRect == nullptr);
 
     if(response->isSucceed()) {
-        // log::info("deleting objects");
-        // for(int i = 0; i < objectsInRect->count(); i++){
-        //     GameObject* object = dynamic_cast<GameObject*>(objectsInRect->objectAtIndex(i));
-        //     if(object != nullptr && !object->isTrigger()) {
-        //         levelEditorLayer->removeObject(object, true);
-        //         objectsInRect->removeObject(objectsInRect->objectAtIndex(i), false);
-        //         i--;
+        // bool cleanupObjects = Mod::get()->getSettingValue<bool>("cleanup-objects");
+
+        // if (cleanupObjects) {
+        //     log::info("deleting objects");
+
+        //     for(int i = 0; i < objectsInRect->count(); i++){
+        //         GameObject* object = typeinfo_cast<GameObject*>(objectsInRect->objectAtIndex(i));
+
+        //         if(object != nullptr && !object->isTrigger()) {
+        //             levelEditorLayer->removeObject(object, true);
+        //             objectsInRect->removeObject(objectsInRect->objectAtIndex(i), false);
+        //             i--;
+        //         }
         //     }
         // }
     } else {
@@ -579,7 +564,7 @@ void AIMenu::update(float delta) {
         cocos2d::CCArray * objs = levelEditorLayer->createObjectsFromString(gameObj, false, false);
 
         for (int i = 0; i < objs->count(); i++) {
-            GameObject *_obj = dynamic_cast<GameObject *>(objs->objectAtIndex(i));
+            GameObject *_obj = typeinfo_cast<GameObject *>(objs->objectAtIndex(i));
 
             if (_obj) {
                 processCreatedObject(_obj);
@@ -610,24 +595,30 @@ void AIMenu::processCreatedObject(GameObject *obj) {
 
     // _createdObjects.push_back(obj);
 
-    auto lel = LevelEditorLayer::get();
+    // auto lel = LevelEditorLayer::get();
 
-    UndoObject *undo = UndoObject::create(obj, UndoCommand::New);
-    lel->m_undoObjects->addObject(undo);
+    // UndoObject *undo = UndoObject::create(obj, UndoCommand::New);
+    // lel->m_undoObjects->addObject(undo);
 }
 
 void AIMenu::removeTouchDispatcher() {
     auto dispatcher = cocos2d::CCDirector::sharedDirector()->getTouchDispatcher();
-    // pFVar2 = this + 0x108;
 
-    // windows
-    auto delegate = (cocos2d::CCTouchDelegate *)(((char *)this) + 0x108);
+#ifdef _WIN32
+    // 2.204 
+        // pFVar2 = this + 0x108;
+    // 2.206
+        // puVar1 = &this[-1].field_0x120;
 
-    dispatcher->removeDelegate(delegate);
+    CCObject *obj = (CCObject *)(((unsigned char *)this) + 0x120); // MAYBE
+
+    dispatcher->unregisterForcePrio(obj);
+#else
+    dispatcher->unregisterForcePrio(this);
+#endif
 }
 void AIMenu::addTouchDispatcher() {
     registerWithTouchDispatcher();
-
 }
 
 void AIMenu::processObjectsGlobally() {

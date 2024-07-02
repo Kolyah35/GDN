@@ -67,7 +67,7 @@ void GDNLayer::close() {
     
     void *nptr = this->getChildByID("info-label");
     if (nptr != nullptr) {
-        CCNode *n = dynamic_cast<CCNode *>(this->getChildByID("info-label"));   
+        CCNode *n = typeinfo_cast<CCNode *>(this->getChildByID("info-label"));   
     
         n->removeMeAndCleanup();
     }
@@ -132,6 +132,8 @@ void GDNLayer::setURL(std::string url) {
     _url = url;
 }
 void GDNLayer::begin() {
+    setupNetworking();
+
     if (_requireGDA) {
         beginGD();
 
@@ -183,29 +185,86 @@ void GDNLayer::beginGD() {
 
     // return;
 
+    _currentService = GeometryDash;
+
     GJAccountManager *manager = GJAccountManager::get();
 
     std::string gjp = manager->m_GJP2;
     std::string username = manager->m_username;
     // int aid = manager->m_accountID;
 
-    web::AsyncWebRequest()
-        .bodyRaw(fmt::format("udid=S93972361&userName={}&gjp2={}&secret=Wmfv3899gc9", username, gjp))
-        .userAgent("")
-        .post("https://www.boomlings.com/database/accounts/loginGJAccount.php")
-        .text()
-        .then([this](std::string const& data) {
-            // close();
-            // onSuccess(data);
-            if (data.at(0) == '-') {
+    web::WebRequest req = web::WebRequest();
+
+    req.userAgent("");
+    req.bodyString(fmt::format("udid=S93972361&userName={}&gjp2={}&secret=Wmfv3899gc9", username, gjp));
+    req.timeout(std::chrono::seconds(10));
+
+    auto task = req.post("https://www.boomlings.com/database/accounts/loginGJAccount.php");
+
+    _listener.setFilter(task);
+}
+void GDNLayer::beginN() {
+    _currentService = GDNetwork;
+
+    void *nptr = this->getChildByID("info-label");
+    if (nptr != nullptr) {
+        cocos2d::CCLabelBMFont *n = typeinfo_cast<cocos2d::CCLabelBMFont *>(this->getChildByID("info-label"));   
+    
+        n->setString("Verifying GDN Account...");
+    }
+
+    web::WebRequest req = web::WebRequest();
+    req.timeout(std::chrono::seconds(10));
+
+    _listener.setFilter(req.get(_url));
+}
+
+void GDNLayer::setupNetworking() {
+    if (_networkInstalled) return;
+
+    _networkInstalled = true;
+
+    _listener.bind([this](web::WebTask::Event *e) {
+        if (web::WebResponse *value = e->getValue()) {
+            std::string default_value;
+            if (this->_currentService == GDNLayer::GeometryDash) {
+                default_value = "-1";
+            } else {
+                default_value = "403";
+            }
+
+            std::string res = value->string().unwrapOr(default_value);
+
+            if (this->_currentService == GDNLayer::GDNetwork) {
+                if (!value->ok()) {
+                    this->close();
+                    this->onError(res);
+
+                    return;
+                }
+
+                this->close();
+                this->onSuccess(res);
+
+                return;
+            }
+
+            if (!value->ok()) {
+                this->close();
+                this->onError(res);
+
+                return;
+            }
+
+            if (res.at(0) == '-') {
                 close();
 
-                std::string msg = fmt::format("<cr>Cannot verify</c> GD account: <cy>{}</c>", data);
+                std::string msg = fmt::format("<cr>Cannot verify</c> GD account: <cy>{}</c>", res);
                 _returnedFailure = msg;
                 _failed = true;
 
-                if (_callback != nullptr) {
-                    _callback(this);
+                if (this->_callback != nullptr) {
+                    this->_callback(this);
                 }
 
                 FLAlertLayer *l = FLAlertLayer::create("GDN", msg, "OK");
@@ -213,31 +272,15 @@ void GDNLayer::beginGD() {
 
                 return;
             }
-            beginN();
-        })
-        .expect([this](std::string const& error) {
-            // close();
-            // onError(error);
-            beginN();
-        });
-}
-void GDNLayer::beginN() {
-    web::AsyncWebRequest()
-        .fetch(_url)
-        .text()
-        .then([this](std::string const& data) {
-            close();
-            onSuccess(data);
-        })
-        .expect([this](std::string const& error) {
-            close();
-            onError(error);
-        });
 
-    void *nptr = this->getChildByID("info-label");
-    if (nptr != nullptr) {
-        cocos2d::CCLabelBMFont *n = dynamic_cast<cocos2d::CCLabelBMFont *>(this->getChildByID("info-label"));   
-    
-        n->setString("Verifying GDN Account...");
-    }
+            this->beginN();
+        }
+
+        else if (e->isCancelled()) {
+            this->close();
+            this->onError("Authorization has been canceled");
+
+            return;
+        }
+    });
 }

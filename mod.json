@@ -1,7 +1,10 @@
 {
-	"geode": "2.0.0",
-	"gd": "2.204",
-	"version": "v1.1.0-beta.6",
+	"geode": "3.0.0",
+	"gd": {
+		"win": "2.206",
+		"android": "2.206"
+	},
+	"version": "v1.1.0-beta.7",
 	"id": "kolyah35.gdn",
 	"name": "GD Neural",
 	"developer": "Kolyah35 & dogotrigger",
@@ -13,14 +16,14 @@
 	},
 	"settings": {
 		"url": {
-			"default": "http://127.0.0.1:8000/api",
-			"description": "This URL is used for connection to the GDN's server",
-			"type": "string",
-			"filter": "^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ,.-!/()=?`*;:_{}[]\\|~"
+			"name": "URL",
+			"default": "http://192.168.0.101:8000/api",
+			"description": "This URL is used for connection to the GDN's server.",
+			"type": "string"
 		}
 	},
 	"issues": {
-		"info": "You can report issues about GDN in our <cj>Discord server</c>",
+		"info": "You can report issues about GDN in our <cj>Discord server</c>.",
 		"url": "https://discord.gg/gdn-neiroset-dlia-geometry-dash-1115715187484414044"
 	}
 }
