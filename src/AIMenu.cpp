@@ -152,10 +152,11 @@ void AIMenu::setup() {
     auto textInput = geode::InputNode::create(260, "Enter prompt...", "chatFont.fnt", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-!?:;)(/\\\"'`*=+-_%[]<>|@&^#{}%$~", 200);
     textInput->setID("kolyah35.gdn/textArea");
     this->m_buttonMenu->addChild(textInput);
+    textInput->setPositionY(textInput->getPositionY() + 15.f);
 
-	auto sendBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Send"), this, SEL_MenuHandler(&AIMenu::onSendBtn));
-	sendBtn->setPosition(this->m_buttonMenu->convertToNodeSpace({winSize.width / 2, 85}));
+	auto sendBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Send"), this, menu_selector(AIMenu::onSendBtn));
 	this->m_buttonMenu->addChild(sendBtn);
+    sendBtn->setPositionY(textInput->getPositionY() - (textInput->getContentHeight() / 2.f) - 20.f);
 }
 
 void AIMenu::keyBackClicked() {
@@ -465,9 +466,17 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
         // }
     } else {
         // log::info("HTTP ERROR");
+        int responseCode = response->getResponseCode();
+
         notification->setIcon(NotificationIcon::Error);
-        notification->setString(fmt::format("Error {}: {}", response->getResponseCode(), response->getErrorBuffer()));
         notification->setTime(1.0f);
+
+        if (responseCode == -1) {
+            notification->setString(fmt::format("Error: Server is unreachable. ({})", response->getErrorBuffer()));
+        }
+        else {
+            notification->setString(fmt::format("Error {}: {}", responseCode, response->getErrorBuffer()));
+        }
 
         _closeWithCleanup = true;
         onClose(this);

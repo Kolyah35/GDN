@@ -334,7 +334,7 @@ class $modify(AIEditor, EditorUI) {
 
 	void onAI(CCObject* obj) {
 		if (aimenu_exists) return;
-		if (AISettings::loginRequested) return;
+		// if (AISettings::loginRequested) return;
 
 		if (AISettings::attemptedToLogin) {
 			if (!AISettings::loginSuccessful) {
@@ -343,7 +343,7 @@ class $modify(AIEditor, EditorUI) {
 
 				return;
 			} else {
-				auto aiMenu = AIMenu::create(300, 200);
+				auto aiMenu = AIMenu::create(300, 100);
 				this->getParent()->addChild(aiMenu);
 			}
 		} else {
@@ -416,7 +416,7 @@ class $modify(AMenuLayer, MenuLayer) {
 	}
 
 	void onGDN(CCObject *obj) {
-		if (AISettings::loginRequested) return;
+		// if (AISettings::loginRequested) return;
 
 		AISettings::loginRequested = true;
 
@@ -426,7 +426,7 @@ class $modify(AMenuLayer, MenuLayer) {
 		l->withGDAuthentication();
 		l->begin();
 
-		l->setCallback([this] (GDNLayer *l2) {
+		l->setCallback([this](GDNLayer* l2) {
 			AISettings::attemptedToLogin = true;
 			AISettings::loginSuccessful = !l2->isFailed();
 			if (!AISettings::loginSuccessful) {

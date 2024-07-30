@@ -1,3 +1,5 @@
 .vscode
 build
-testapi/node_modules/** 
+testapi/node_modules/**
+out
+.vs/**
