@@ -13,7 +13,7 @@ namespace GDNGlobal {
 		for (int i = 0; i < children->count(); i++) {
 			cocos2d::CCObject *_obj = children->objectAtIndex(i);
 
-			T *dyn = typeinfo_cast<T *>(_obj);
+			T *dyn = geode::cast::typeinfo_cast<T *>(_obj);
 
 			if (dyn != nullptr) {
 				objs.push_back(dyn);
@@ -30,9 +30,9 @@ namespace GDNGlobal {
 		for (int i = 0; i < array->count(); i++) {
 			cocos2d::CCObject *_obj = array->objectAtIndex(i);
 
-			T *dyn = typeinfo_cast<T *>(_obj);
+			T *dyn = geode::cast::typeinfo_cast<T *>(_obj);
 
-			if (dyn != nullptr){ 
+			if (dyn != nullptr){
 				vec.push_back(dyn);
 			}
 		}

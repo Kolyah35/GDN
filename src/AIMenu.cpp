@@ -99,9 +99,9 @@ void AIMenu::onClose(cocos2d::CCObject*) {
     auto gm = GameManager::sharedState();
 
     // CCMenuItemSpriteExtra *swipeBtn = typeinfo_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
-    
+
     // if (swipeBtn != nullptr) {
-    //     swipeBtn->activate(); 
+    //     swipeBtn->activate();
     // }
 
     CCObject* obj;
@@ -143,20 +143,27 @@ void AIMenu::onClose(cocos2d::CCObject*) {
 
 void AIMenu::setup() {
 	this->setZOrder(101);
-    auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();	
-    
+    auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();
+
     // auto selectBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Select Area"), this, cocos2d::SEL_MenuHandler(&AIMenu::selectAreaClicked));
     // selectBtn->setPosition(this->m_buttonMenu->convertToNodeSpace({winSize.width / 2, 235}));
 	// this->m_buttonMenu->addChild(selectBtn);
 
-    auto textInput = geode::InputNode::create(260, "Enter prompt...", "chatFont.fnt", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-!?:;)(/\\\"'`*=+-_%[]<>|@&^#{}%$~", 200);
+    auto textInput = geode::TextInput::create(260, "Enter prompt...", "chatFont.fnt");
+    auto idInput = geode::TextInput::create(260, "Enter color IDs to be used (i.e. 1-5)...", "chatFont.fnt");
+    idInput->setFilter("0123456789-");
+
     textInput->setID("kolyah35.gdn/textArea");
     this->m_buttonMenu->addChild(textInput);
-    textInput->setPositionY(textInput->getPositionY() + 15.f);
+    textInput->setPositionY(textInput->getPositionY() + 60.f - 25.f);
+
+    idInput->setID("kolyah35.gdn/idInput");
+    this->m_buttonMenu->addChild(idInput);
+    idInput->setPositionY(textInput->getPositionY() - textInput->getContentHeight() - 5.f);
 
 	auto sendBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Send"), this, menu_selector(AIMenu::onSendBtn));
 	this->m_buttonMenu->addChild(sendBtn);
-    sendBtn->setPositionY(textInput->getPositionY() - (textInput->getContentHeight() / 2.f) - 20.f);
+    sendBtn->setPositionY(textInput->getPositionY() - (textInput->getContentHeight() / 2.f) - 60.f);
 }
 
 void AIMenu::keyBackClicked() {
@@ -249,7 +256,7 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
         CCMenu *_menu = CCMenu::create();
 
         auto okBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("OK"), this, cocos2d::SEL_MenuHandler(&AIMenu::okButtonClicked));
-        
+
         okBtn->setID("kolyah35.gdn/okBtn");
         _menu->addChild(okBtn);
 
@@ -263,7 +270,7 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
         removeTouchDispatcher();
 
         CCMenuItemSpriteExtra *swipeBtn = typeinfo_cast<CCMenuItemSpriteExtra *>(editorUI->getChildByIDRecursive("swipe-button"));
-        
+
         if (swipeBtn != nullptr) {
             auto btnsprv = GDNGlobal::findInstancesOfObj<ButtonSprite>(swipeBtn);
 
@@ -275,14 +282,14 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
                 ButtonSprite *btnspr = btnsprv[0];
 
                 CCSprite *bg = btnspr->m_subBGSprite;
-                
+
                 // definetely not stolen from devtools
                 if (auto textureProtocol = typeinfo_cast<CCTextureProtocol*>(bg)) {
                     if (auto texture = textureProtocol->getTexture()) {
                         auto* cachedTextures = CCTextureCache::sharedTextureCache()->m_pTextures;
                         for (auto [key, obj] : CCDictionaryExt<std::string, CCTexture2D*>(cachedTextures)) {
                             if (obj == texture) {
-                                
+
                                 if (key.find("GJ_button_01") != std::string::npos) {
                                     swipeBtn->activate();
                                     log::info("activating swipe");
@@ -333,7 +340,39 @@ void AIMenu::onSendBtn(CCObject*) {
     auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
     auto editorUI = (EditorUI*)levelEditorLayer->getChildByID("EditorUI");
     auto am = GJAccountManager::sharedState();
-    auto inputNode = (InputNode*)this->m_buttonMenu->getChildByID("kolyah35.gdn/textArea");
+    auto inputNode = (TextInput*)this->m_buttonMenu->getChildByID("kolyah35.gdn/textArea");
+    auto idInputNode = (TextInput*)this->m_buttonMenu->getChildByID("kolyah35.gdn/idInput");
+
+    std::string id_area = idInputNode->getString();
+    std::string val_a, val_b;
+    bool val_switch = false;
+
+    for (const char c : id_area) {
+        if (c != '-') {
+            if (!val_switch) val_a += c;
+            else val_b += c;
+        } else {
+            if (!val_a.empty()) val_switch = true;
+        }
+    }
+
+    log::info("val_a={}; val_b={}", val_a, val_b);
+
+    int ival_a = 1;
+    int ival_b = 5;
+    if (!val_a.empty()) {
+        ival_a = std::stoi(val_a);
+    }
+    if (!val_b.empty()) {
+        ival_b = std::stoi(val_b);
+    }
+
+    if (ival_b - ival_a < 4) return;
+
+    std::vector<int> color_ids;
+    for (int i = ival_a; i <= ival_b; i++) {
+        color_ids.push_back(i);
+    }
 
     m_aiSelectObjects = true;
     GDNGlobal::accessSelectedObjects();
@@ -341,18 +380,14 @@ void AIMenu::onSendBtn(CCObject*) {
 
     nlohmann::json data;
 
-    nlohmann::json userobj;
-
-    userobj["UserName"] = am->m_username;
-    userobj["Prompt"] = inputNode->getString();
-
-    data["User"] = userobj;
+    data["Prompt"] = inputNode->getString();
+    data["ListColor"] = color_ids;
 
     nlohmann::json blocks = nlohmann::json::array();
 
     {
         auto obj_vec = GDNGlobal::convertArrayIntoVector<GameObject>(GDNGlobal::selectedObjects);
-        
+
         m_selectedRect = GDNGlobal::createOriginRect(obj_vec);
     }
 
@@ -362,24 +397,14 @@ void AIMenu::onSendBtn(CCObject*) {
         auto object = typeinfo_cast<GameObject*>(objectsInRect->objectAtIndex(i));
 
         bdata["ID"] = object->m_objectID;
-        bdata["X"] = (int)(object->getPositionX() - m_selectedRect.origin.x);
-        bdata["Y"] = (int)(object->getPositionY() - m_selectedRect.origin.y);
-        bdata["Z"] = (int)(object->m_zOrder);
-        bdata["L"] = (int)(object->m_editorLayer);
+        bdata["PosX"] = (int)(object->getPositionX() - m_selectedRect.origin.x);
+        bdata["PosY"] = (int)(object->getPositionY() - m_selectedRect.origin.y);
         bdata["ScaleX"] = object->m_scaleX;
         bdata["ScaleY"] = object->m_scaleY;
-        bdata["ScaleX"] = object->m_scaleX;
-        bdata["Rotation"] = object->getRotation();
+        bdata["Rotate"] = object->getRotation();
 
-        if(object->m_baseColor) {;
-            bdata["BaseColor"] = (int)object->m_baseColor->m_colorID;
-        }
 
-        if(object->m_detailColor) {
-            bdata["DetailColor"] = (int)object->m_detailColor->m_colorID;
-        }
-
-        nlohmann::json groups = nlohmann::json::array();
+       /* nlohmann::json groups = nlohmann::json::array();
 
         for(int i = 0; i < object->m_groupCount; i++) {
             groups.push_back(object->m_groups->at(i));
@@ -387,14 +412,14 @@ void AIMenu::onSendBtn(CCObject*) {
 
         bdata["Groups"] = groups;
 
-        blocks.push_back(bdata);
+        blocks.push_back(bdata);*/
     }
 
-    data["Blocks"] = blocks;
+    data["Data"] = blocks;
 
     std::string buffer = data.dump();
 
-    log::info("{} | {} | {}", buffer, buffer.length(), buffer.size());
+    // log::info("{} | {} | {}", buffer, buffer.length(), buffer.size());
 
     auto client = CCHttpClient::getInstance();
     auto request = new CCHttpRequest();
@@ -416,25 +441,26 @@ void AIMenu::onSendBtn(CCObject*) {
     addChild(gdnl);
 }
 
-std::string AIMenu::createColorTrigger(int colId, ccColor3B col, float dur) {
+std::string AIMenu::createColorTrigger(int colId, ccColor3B col, float dur, bool blending) {
     // we would setup a 2.0 color trigger with customizable rgb and col id values
-    std::string color_trigger_str = fmt::format("1,899,2,-100,3,100,7,{},8,{},9,{},10,{},23,{}", col.r, col.g, col.b, dur, colId);
-	
+    std::string color_trigger_str = fmt::format("1,899,2,-100,3,100,7,{},8,{},9,{},10,{},17,{},23,{}", col.r, col.g, col.b, dur, (int)blending, colId);
+
     // return color trigger data
 	return color_trigger_str;
 }
 
-std::string AIMenu::createStandardObject(cocos2d::CCPoint pos, int id, int z, int l, float scaleX, float scaleY, int baseCol, int detailCol, float rotation, std::vector<int> groups) {
+std::string AIMenu::createStandardObject(cocos2d::CCPoint pos, int id, int l, float scaleX, float scaleY, int baseCol, float rotation, std::vector<int> groups) {
     std::string group_string;
 
     for (int g : groups) {
         group_string += fmt::format("{}.", g);
     }
+    if (groups.size() != 0 && !group_string.empty()) {
+        group_string.pop_back();
+    }
 
-    group_string.pop_back();
+    std::string object_str = fmt::format("1,{},2,{},3,{},20,{},21,{},128,{},129,{},6,{},57,{}", id, pos.x, pos.y, l, baseCol, scaleX, scaleY, rotation, group_string);
 
-    std::string object_str = fmt::format("1,{},2,{},3,{},20,{},25,{},21,{},22,{},128,{},129,{},6,{},57,{}", id, pos.x, pos.y, l, z, baseCol, detailCol, scaleX, scaleY, rotation, group_string);
-	
 	return object_str;
 }
 
@@ -444,11 +470,12 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
     m_aiSelectObjects = true;
     GDNGlobal::accessSelectedObjects();
     auto objectsInRect = GDNGlobal::selectedObjects;
-    
-    // log::info("HTTP CALLBACK");
-    // log::info("{}", objectsInRect == nullptr);
+
+    log::info("HTTP CALLBACK");
+    log::info("{}", objectsInRect == nullptr);
 
     if(response->isSucceed()) {
+        log::info("Request succeeded");
         // bool cleanupObjects = Mod::get()->getSettingValue<bool>("cleanup-objects");
 
         // if (cleanupObjects) {
@@ -498,17 +525,19 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
     // std::string object_array = "";
     _readyToPlace = false;
 
-    for (int i = 0; i < responsejson["Blocks"].size(); i++) {
-        nlohmann::json obj = responsejson["Blocks"].at(i);
+    std::map<int, ccColor4B> colors;
+
+    for (int i = 0; i < responsejson["Data"].size(); i++) {
+        nlohmann::json obj = responsejson["Data"].at(i);
 
         auto ID = obj["ID"].get<int>();
-    
-        auto x = obj["X"].get<float>();
-        auto y = obj["Y"].get<float>();
-        auto z = obj["Z"].get<int>();
-        auto l = obj["L"].get<int>();
 
-        auto rot = obj["Rotation"].get<float>();
+        log::info("parcing block ID:{}", ID);
+
+        auto x = obj["PosX"].get<float>();
+        auto y = obj["PosY"].get<float>();
+
+        auto rot = obj["Rotate"].get<float>();
 
         x += m_selectedRect.origin.x;
         y += m_selectedRect.origin.y;
@@ -516,37 +545,37 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
         auto scaleX = obj["ScaleX"].get<float>();
         auto scaleY = obj["ScaleY"].get<float>();
 
-        auto baseColor = obj["BaseColor"].get<int>();
-        auto detailColor = obj["DetailColor"].get<int>();
-        
-        std::vector<int> groups;
-        for (nlohmann::json::iterator it = obj["Groups"].begin(); it != obj["Groups"].end(); ++it) {
+        auto color = obj["Color"];
+
+        ccColor4B colobj = {};
+        colobj.a = (color["Blending"].get<bool>()) ? 0 : 255;
+        colobj.r = color["R"].get<int>();
+        colobj.g = color["G"].get<int>();
+        colobj.b = color["B"].get<int>();
+        int colid = color["id"].get<int>();
+
+        colors[colid] = colobj;
+
+        std::vector<int> groups = {};
+        /*for (nlohmann::json::iterator it = obj["Groups"].begin(); it != obj["Groups"].end(); ++it) {
             auto key = *it;
             groups.push_back(key);
-        }
+        }*/
 
-        std::string objdata = createStandardObject({x,y}, ID, z, l, scaleX, scaleY, baseColor, detailColor, rot, groups);
+        log::info("generating object string", ID);
+
+        std::string objdata = createStandardObject({x,y}, ID, 10, scaleX, scaleY, colid, rot, groups);
         _gameObjects.push_back(objdata);
     }
 
-    for (int i = 0; i < responsejson["Colors"].size(); i++) {
-        nlohmann::json color = responsejson["Colors"].at(i);
-
-        auto ID = color["ID"].get<int>();
-    
-        uint8_t r = (unsigned int)color["R"].get<int>();
-        uint8_t g = (unsigned int)color["G"].get<int>();
-        uint8_t b = (unsigned int)color["B"].get<int>();
-       
-        // log::info("creating color trigger with this info: id={}, r={}, g={}, b={}, dur={}", ID, r, g, b, 0.f);
-        
-        std::string coldata = createColorTrigger(ID, {r, g, b}, 0.f);
-        // log::info("placing color trigger with this data: {}", coldata);
+    for (const auto &[k, v] : colors) {
+        std::string coldata = createColorTrigger(k, {v.r, v.g, v.b}, 0.f, v.a == 0);
+        log::info("placing color trigger with this data: {}", coldata);
         levelEditorLayer->createObjectsFromString(coldata, false, false);
     }
 
     notification->setIcon(NotificationIcon::Success);
-    notification->setString(fmt::format("Success! Created {} objects.", responsejson["Blocks"].size() + responsejson["Colors"].size()));
+    notification->setString(fmt::format("Success! Created {} objects.", responsejson["Data"].size() + colors.size()));
     notification->setTime(1.0f);
 
     // delete resp;
@@ -564,7 +593,7 @@ void AIMenu::update(float delta) {
     if (_gameObjects.size() > 0 && _readyToPlace) {
         _closeWithCleanup = false;
         if (!_closed) onClose(this);
-        setVisible(false); 
+        setVisible(false);
 
         std::string gameObj = _gameObjects.at(_gameObjects.size() - 1);
 
@@ -614,7 +643,7 @@ void AIMenu::removeTouchDispatcher() {
     auto dispatcher = cocos2d::CCDirector::sharedDirector()->getTouchDispatcher();
 
 #ifdef _WIN32
-    // 2.204 
+    // 2.204
         // pFVar2 = this + 0x108;
     // 2.206
         // puVar1 = &this[-1].field_0x120;

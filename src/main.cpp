@@ -12,7 +12,7 @@
 /*
 	ОСТОРОЖНО! ЩИТКОД
 	Многие вещи в этом моде были написаны на скорую руку
-	для теста и в планах былодорботать все на релизе, но 
+	для теста и в планах былодорботать все на релизе, но
 	я устал работать над этим модом. Удачи.
 */
 
@@ -92,7 +92,7 @@ std::vector<GameObject *> GDNGlobal::copyObjectsWithRelativePos() {
 		CCObject *base_object = selectedObjects->objectAtIndex(i);
 		GameObject *game_object = typeinfo_cast<GameObject *>(base_object);
 
-		if (game_object == nullptr) continue;	
+		if (game_object == nullptr) continue;
 
 		GameObject *new_object = copyGameObject(game_object);
 		new_object->retain();
@@ -112,7 +112,7 @@ std::vector<GameObject *> GDNGlobal::copyObjectsWithRelativePos() {
 
 	for (GameObject *ref : result) {
 		auto pos = ref->getPosition();
-			
+
 		pos.x -= min_x;
 		pos.y -= min_y - 90.f;
 
@@ -167,7 +167,7 @@ std::map<int, std::string> GDNGlobal::parseObjectData(std::string &object_string
 	bool _key = true;
 
 	int key;
-	std::string value; 
+	std::string value;
 
 	for (std::string el : data) {
 		if (_key) {
@@ -227,9 +227,9 @@ class $modify(AIEditor, EditorUI) {
 		}
 
 		auto menu = this->getChildByID("editor-buttons-menu");
-		
+
 		auto aibtn = CCMenuItemSpriteExtra::create(btn_spr, this, SEL_MenuHandler(&AIEditor::onAI));
-		
+
 		aibtn->setPosition({-110, 150});
 		aibtn->setID("gdn-create");
 
@@ -286,7 +286,7 @@ class $modify(AIEditor, EditorUI) {
 		log::info("hook! p0={}; p1={}", p0->count(), p1);
 
 		EditorUI::selectObjects(p0, p1);
-		
+
 		GDNGlobal::accessSelectedObjects();
 		GDNGlobal::clearArrayWithoutCleanup(GDNGlobal::selectedObjects);
 
@@ -343,7 +343,7 @@ class $modify(AIEditor, EditorUI) {
 
 				return;
 			} else {
-				auto aiMenu = AIMenu::create(300, 100);
+				auto aiMenu = AIMenu::create(300, 130);
 				this->getParent()->addChild(aiMenu);
 			}
 		} else {
@@ -421,7 +421,7 @@ class $modify(AMenuLayer, MenuLayer) {
 		AISettings::loginRequested = true;
 
 		auto l = GDNLayer::create();
-		
+
 		l->setURL("https://example.com");
 		l->withGDAuthentication();
 		l->begin();
@@ -477,7 +477,7 @@ class $modify(ALevelEditorLayer, LevelEditorLayer){
 			AIMenu::m_drawbox->drawPolygon(rectangle, 4, {0.0f, 0.0f, 0.0f, 0.0f}, 1.0f, {1.0f, 1.0f, 0.0f, 1.0f});
 			// AIMenu::m_selectedRect = rect;
 			AIMenu::m_ignoreLayer = ignoreLayer;
-			
+
 			return CCArray::create();
 		} else {
 			AIMenu::m_aiSelectObjects = false;
@@ -489,10 +489,10 @@ class $modify(ALevelEditorLayer, LevelEditorLayer){
 
 // class MySettingValue : StringSettingValue {
 // public:
-	
+
 // };
 
 // $execute {
 // 	auto urlSetting = Mod::get()->getSettingDefinition("url");
-	
+
 // }

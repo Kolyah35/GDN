@@ -168,7 +168,7 @@ void GDNLayer::withGDAuthentication() {
 
     auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();
 
-    auto bmf = cocos2d::CCLabelBMFont::create("Verifying GD Account Identity...", "goldFont.fnt");
+    auto bmf = cocos2d::CCLabelBMFont::create("Verifying GD Account...", "goldFont.fnt");
 	bmf->setScale(0.5f);
 	bmf->setPositionX(winSize.width / 2);
 	bmf->setPositionY((winSize.height / 2) + _circle->m_pCircle->getContentSize().height - 10.f);

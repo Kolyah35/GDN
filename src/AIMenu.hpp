@@ -50,8 +50,8 @@ protected:
 
     void onHttpCallback(cocos2d::extension::CCHttpClient* client, cocos2d::extension::CCHttpResponse* response);
     
-    std::string createColorTrigger(int colId, cocos2d::ccColor3B col, float dur);
-    std::string createStandardObject(cocos2d::CCPoint pos, int id, int z, int l, float scaleX, float scaleY, int baseCol, int detailCol, float rotation, std::vector<int> groups);
+    std::string createColorTrigger(int colId, cocos2d::ccColor3B col, float dur, bool blending);
+    std::string createStandardObject(cocos2d::CCPoint pos, int id, int l, float scaleX, float scaleY, int baseCol, float rotation, std::vector<int> groups);
     
     void update(float delta) override;
 };

@@ -5,76 +5,34 @@ const process = require('process')
 const file = "../resources/testjson.json"
 
 if (!fs.existsSync(file)) {
-	console.error(`file ${file} doesn't exist. please create this file and restart testapi application`);
+	console.error(`warn: file ${file} doesn't exist. please create this file and restart testapi application`);
 
-	process.exit(1);
+	// process.exit(1);
 }
 
 const app = express()
 const port = 8000
 
-/**
- * {
-    "Blocks": [
-        {
-            "ID": 1,
-            "X": 15.0,
-            "Y": 15.0,
-            "Z": 1,
-            "L": 0,
-            "color": [255, 255, 255],
-            "ScaleX": 1.1,
-            "ScaleY": 1.1,
-            "BaseColor": 1,
-            "DetailColor": 1,
-            "Groups": 0
-        }
-    ],
-    "Colors": [
-        {
-            "ID": 1,
-            "R": 255,
-            "G": 0,
-            "B": 0
-        }
-    ]
-}
- */
-
 let jsonstr = {
-	"Blocks": [
+	"Data": [
         
     ],
-    "Colors": [
-        {
-            "ID": 1,
-            "R": 255,
-            "G": 0,
-            "B": 0
-        }
-    ]
 }
 let jsonblock = {
 	"ID": 5,
-	"X": 15.0,
-	"Y": 15.0,
-	"Z": 0,
-	"L": 0,
-	"color": [255, 255, 255],
+	"PosX": 15.0,
+	"PosY": 15.0,
+	"Color": {"id": 0, "R": 255, "G": 255, "B": 255, "Blending": true},
 	"ScaleX": 1.1,
 	"ScaleY": 1.1,
-	"BaseColor": 1,
 	"DetailColor": 1,
-	"Groups": 0,
-    "Rotation": 50,
-    "Groups": [1, 2, 3]
+    "Rotate": 50,
 }
 
 for (let i = 0; i < 64; i++) {
-    jsonblock.X += 15;
-    jsonblock.L++;
-    jsonblock.Z++;
-	jsonstr.Blocks.push(JSON.parse(JSON.stringify(jsonblock)));
+    jsonblock.PosX += 15;
+    jsonblock.PosY += 2;
+	jsonstr.Data.push(JSON.parse(JSON.stringify(jsonblock)));
 }
 
 const jsonstr_str = JSON.stringify(jsonstr);

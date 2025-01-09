@@ -3,3 +3,4 @@ build
 testapi/node_modules/**
 out
 .vs/**
+build-win
