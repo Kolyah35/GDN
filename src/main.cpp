@@ -70,10 +70,10 @@ cocos2d::CCRect GDNGlobal::createOriginRect(std::vector<GameObject *> &objects) 
 
 	log::info("min_x={}; min_y={}; max_x={}; max_y={};", min_x, min_y, max_x, max_y);
 
-	rect.origin.x = min_x;
-	rect.origin.y = min_y;
-	rect.size.width = max_x - min_x;
-	rect.size.height = max_y - min_y;
+	rect.origin.x = min_x - 30;
+	rect.origin.y = min_y - 30;
+	rect.size.width = max_x - min_x + 60;
+	rect.size.height = max_y - min_y + 60;
 
 	return rect;
 }
@@ -188,12 +188,6 @@ void GDNGlobal::deleteObjectVector(std::vector<GameObject *> &objects) {
 		obj->release();
 	}
 }
-
-namespace REMessage {
-	static void run() {
-		printf("hello internet! welcome to the game\n");
-	}
-};
 
 namespace AISettings {
 	bool loginSuccessful = false;
