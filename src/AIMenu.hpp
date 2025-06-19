@@ -35,7 +35,7 @@ public:
     void addTouchDispatcher();
 protected:
     cocos2d::CCSize m_layerSize;
-    
+
     bool init(float w, float h, const char* spr = "GJ_square01.png");
 
     void setup();
@@ -45,13 +45,13 @@ protected:
     void keyBackClicked() override;
 
     void selectAreaClicked(cocos2d::CCObject*);
-    void okButtonClicked(CCObject*); 
+    void okButtonClicked(CCObject*);
     void onSendBtn(CCObject*);
 
     void onHttpCallback(cocos2d::extension::CCHttpClient* client, cocos2d::extension::CCHttpResponse* response);
-    
+
     std::string createColorTrigger(int colId, cocos2d::ccColor3B col, float dur, bool blending);
-    std::string createStandardObject(cocos2d::CCPoint pos, int id, int l, float scaleX, float scaleY, int baseCol, float rotation, std::vector<int> groups);
-    
+    std::string createStandardObject(cocos2d::CCPoint pos, int id, int l, float scaleX, float scaleY, int baseCol, float rotation, std::vector<int> groups, int zlayer, int zorder);
+
     void update(float delta) override;
 };

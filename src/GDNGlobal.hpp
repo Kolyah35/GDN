@@ -47,10 +47,10 @@ namespace GDNGlobal {
 
 	void accessSelectedObjects();
 	void clearArrayWithoutCleanup(cocos2d::CCArray *array);
-	cocos2d::CCRect createOriginRect(std::vector<GameObject *> &objects);
+	cocos2d::CCRect createOriginRect(const std::vector<GameObject *> &objects);
 	std::vector<GameObject *> copyObjectsWithRelativePos();
 	GameObject *copyGameObject(GameObject *_obj);
 	std::vector<std::string> splitString(const char *str, char d);
-	std::map<int, std::string> parseObjectData(std::string &object_string);
-	void deleteObjectVector(std::vector<GameObject *> &objects);
+	std::map<int, std::string> parseObjectData(const std::string &object_string);
+	void deleteObjectVector(const std::vector<GameObject *> &objects);
 }

@@ -46,9 +46,9 @@ void GDNGlobal::clearArrayWithoutCleanup(CCArray *array) {
 		array->removeObjectAtIndex(0, false);
 	}
 }
-cocos2d::CCRect GDNGlobal::createOriginRect(std::vector<GameObject *> &objects) {
-	float min_x; float min_y;
-	float max_x; float max_y;
+cocos2d::CCRect GDNGlobal::createOriginRect(const std::vector<GameObject *> &objects) {
+	float min_x = 0, min_y = 0;
+	float max_x = 0, max_y = 0;
 
 	std::vector<float> x_vec;
 	std::vector<float> y_vec;
@@ -159,7 +159,7 @@ std::vector<std::string> GDNGlobal::splitString(const char *str, char d) {
 	return result;
 }
 
-std::map<int, std::string> GDNGlobal::parseObjectData(std::string &object_string) {
+std::map<int, std::string> GDNGlobal::parseObjectData(const std::string &object_string) {
 	std::vector<std::string> data = splitString(object_string.data(), ',');
 
 	std::map<int, std::string> object_map;
@@ -183,7 +183,7 @@ std::map<int, std::string> GDNGlobal::parseObjectData(std::string &object_string
 
 	return object_map;
 }
-void GDNGlobal::deleteObjectVector(std::vector<GameObject *> &objects) {
+void GDNGlobal::deleteObjectVector(const std::vector<GameObject *> &objects) {
 	for (GameObject *obj : objects) {
 		obj->release();
 	}
@@ -244,8 +244,8 @@ class $modify(AIEditor, EditorUI) {
 		auto objects = GDNGlobal::convertArrayIntoVector<GameObject>(GDNGlobal::selectedObjects);
 		auto rect = GDNGlobal::createOriginRect(objects);
 
-		rect.origin.x = floorf(rect.origin.x - ALIGN(rect.origin.x));
-		rect.origin.y = floorf(rect.origin.y - ALIGN(rect.origin.y));
+		rect.origin.x = (rect.origin.x - ALIGN(rect.origin.x));
+		rect.origin.y = (rect.origin.y - ALIGN(rect.origin.y));
 		rect.size.width += (30 - ALIGN(rect.size.width));
 		rect.size.height += (30 - ALIGN(rect.size.height));
 

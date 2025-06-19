@@ -378,18 +378,15 @@ void AIMenu::onSendBtn(CCObject*) {
     GDNGlobal::accessSelectedObjects();
     auto objectsInRect = GDNGlobal::selectedObjects;
 
+    log::info("amount of GameObjects: {}", objectsInRect->count());
+
     nlohmann::json data;
 
     data["Prompt"] = inputNode->getString();
     data["ListColor"] = color_ids;
 
     nlohmann::json blocks = nlohmann::json::array();
-
-    {
-        auto obj_vec = GDNGlobal::convertArrayIntoVector<GameObject>(GDNGlobal::selectedObjects);
-
-        m_selectedRect = GDNGlobal::createOriginRect(obj_vec);
-    }
+    m_selectedRect = GDNGlobal::createOriginRect(GDNGlobal::convertArrayIntoVector<GameObject>(GDNGlobal::selectedObjects));
 
     for(int i = 0; i < objectsInRect->count(); i++) {
         nlohmann::json bdata;
@@ -402,24 +399,25 @@ void AIMenu::onSendBtn(CCObject*) {
         bdata["ScaleX"] = object->m_scaleX;
         bdata["ScaleY"] = object->m_scaleY;
         bdata["Rotate"] = object->getRotation();
+        bdata["Z_order"] = object->m_nZOrder;
+        bdata["Z_layer"] = object->getObjectZLayer();
 
-
-       /* nlohmann::json groups = nlohmann::json::array();
+        /* nlohmann::json groups = nlohmann::json::array();
 
         for(int i = 0; i < object->m_groupCount; i++) {
             groups.push_back(object->m_groups->at(i));
         }
 
         bdata["Groups"] = groups;
-
-        blocks.push_back(bdata);*/
+        */
+        blocks.push_back(bdata);
     }
 
     data["Data"] = blocks;
 
     std::string buffer = data.dump();
 
-    // log::info("{} | {} | {}", buffer, buffer.length(), buffer.size());
+    log::info("{} | {} | {}", buffer, buffer.length(), buffer.size());
 
     auto client = CCHttpClient::getInstance();
     auto request = new CCHttpRequest();
@@ -449,7 +447,7 @@ std::string AIMenu::createColorTrigger(int colId, ccColor3B col, float dur, bool
 	return color_trigger_str;
 }
 
-std::string AIMenu::createStandardObject(cocos2d::CCPoint pos, int id, int l, float scaleX, float scaleY, int baseCol, float rotation, std::vector<int> groups) {
+std::string AIMenu::createStandardObject(cocos2d::CCPoint pos, int id, int l, float scaleX, float scaleY, int baseCol, float rotation, std::vector<int> groups, int zlayer, int zorder) {
     std::string group_string;
 
     for (int g : groups) {
@@ -459,7 +457,7 @@ std::string AIMenu::createStandardObject(cocos2d::CCPoint pos, int id, int l, fl
         group_string.pop_back();
     }
 
-    std::string object_str = fmt::format("1,{},2,{},3,{},20,{},21,{},128,{},129,{},6,{},57,{}", id, pos.x, pos.y, l, baseCol, scaleX, scaleY, rotation, group_string);
+    std::string object_str = fmt::format("1,{},2,{},3,{},20,{},21,{},128,{},129,{},6,{},57,{},24,{},25,{}", id, pos.x, pos.y, l, baseCol, scaleX, scaleY, rotation, group_string, zlayer, zorder);
 
 	return object_str;
 }
@@ -539,8 +537,8 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
 
         auto rot = obj["Rotate"].get<float>();
 
-        x += m_selectedRect.origin.x;
-        y += m_selectedRect.origin.y;
+        x += m_selectedRect.origin.x + 30;
+        y += m_selectedRect.origin.y + 30;
 
         auto scaleX = obj["ScaleX"].get<float>();
         auto scaleY = obj["ScaleY"].get<float>();
@@ -554,6 +552,11 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
         colobj.b = color["B"].get<int>();
         int colid = color["id"].get<int>();
 
+        int layer = 0, zlayer = 0, zorder = 0;
+        if (obj.contains("L")) layer = obj["L"].get<int>();
+        if (obj.contains("Z_layer")) zlayer = obj["Z_layer"].get<int>();
+        if (obj.contains("Z_order")) zorder = obj["Z_order"].get<int>();
+
         colors[colid] = colobj;
 
         std::vector<int> groups = {};
@@ -562,9 +565,9 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
             groups.push_back(key);
         }*/
 
-        log::info("generating object string", ID);
+        log::info("generating object string of {}", ID);
 
-        std::string objdata = createStandardObject({x,y}, ID, 10, scaleX, scaleY, colid, rot, groups);
+        std::string objdata = createStandardObject({x,y}, ID, layer, scaleX, scaleY, colid, rot, groups, zlayer, zorder);
         _gameObjects.push_back(objdata);
     }
 
@@ -575,7 +578,7 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
     }
 
     notification->setIcon(NotificationIcon::Success);
-    notification->setString(fmt::format("Success! Created {} objects.", responsejson["Data"].size() + colors.size()));
+    notification->setString(fmt::format("Success! Created {} objects.", responsejson["D ata"].size() + colors.size()));
     notification->setTime(1.0f);
 
     // delete resp;
