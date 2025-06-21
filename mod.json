@@ -4,7 +4,7 @@
     "win": "2.2074",
     "android": "2.2074"
   },
-  "version": "v1.1.0-beta.11",
+  "version": "v1.1.0-beta.12",
   "id": "kolyah35.gdn",
   "name": "GD Neural",
   "developers": ["MemHouse", "Kolyah35", "dogotrigger"],
@@ -27,6 +27,12 @@
       "description": "This URL is used for connection to the GDN's server.",
       "type": "string",
       "filter": "qwertyuiopasdfghjklzxcvbnm1234567890.:/"
+    },
+    "experimental-features": {
+      "name": "Experimental Features",
+      "default": false,
+      "description": "Enables unfinished features.",
+      "type": "bool"
     }
   },
   "issues": {

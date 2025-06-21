@@ -5,6 +5,8 @@
 #include <nlohmann/json.hpp>
 #include "GDNLayer.hpp"
 #include "GDNGlobal.hpp"
+#include "Geode/binding/GJSpriteColor.hpp"
+#include "Geode/ui/Layout.hpp"
 
 #undef GetObject
 
@@ -50,13 +52,12 @@ bool AIMenu::init(float w, float h, const char* spr) {
     this->m_mainLayer->addChild(bg);
 
     this->m_buttonMenu = cocos2d::CCMenu::create();
+    ColumnLayout *layout = ColumnLayout::create();
+    this->m_buttonMenu->setLayout(layout);
     this->m_mainLayer->addChild(this->m_buttonMenu);
 
-    // this->setKeypadEnabled(true);
-    // this->setTouchEnabled(true);
-    // this->setKeyboardEnabled(false);
-
     setup();
+    this->m_buttonMenu->updateLayout();
 
     auto closeSpr = cocos2d::CCSprite::createWithSpriteFrameName("GJ_closeBtn_001.png");
     closeSpr->setScale(.8f);
@@ -145,25 +146,37 @@ void AIMenu::setup() {
 	this->setZOrder(101);
     auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();
 
-    // auto selectBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Select Area"), this, cocos2d::SEL_MenuHandler(&AIMenu::selectAreaClicked));
-    // selectBtn->setPosition(this->m_buttonMenu->convertToNodeSpace({winSize.width / 2, 235}));
-	// this->m_buttonMenu->addChild(selectBtn);
-
     auto textInput = geode::TextInput::create(260, "Enter prompt...", "chatFont.fnt");
     auto idInput = geode::TextInput::create(260, "Enter color IDs to be used (i.e. 1-5)...", "chatFont.fnt");
     idInput->setFilter("0123456789-");
 
-    textInput->setID("kolyah35.gdn/textArea");
-    this->m_buttonMenu->addChild(textInput);
-    textInput->setPositionY(textInput->getPositionY() + 60.f - 25.f);
+    CCMenu *btnMenu = CCMenu::create();
+    RowLayout *layout = RowLayout::create();
+    btnMenu->setLayout(layout);
+
+    auto sendBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Send"), this, menu_selector(AIMenu::onSendBtn));
+	btnMenu->addChild(sendBtn);
+
+	if (Mod::get()->getSettingValue<bool>("experimental-features") == true) {
+        auto feedbackBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Feedback"), this, menu_selector(AIMenu::onSendBtn));
+    	btnMenu->addChild(feedbackBtn);
+
+    	auto selectAreaBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Select Area"), this, menu_selector(AIMenu::onSendBtn));
+    	btnMenu->addChild(selectAreaBtn);
+	}
+
+	btnMenu->setContentWidth(m_layerSize.width);
+	btnMenu->setTouchPriority(-700);
+	btnMenu->updateLayout();
+    this->m_buttonMenu->addChild(btnMenu);
 
     idInput->setID("kolyah35.gdn/idInput");
     this->m_buttonMenu->addChild(idInput);
-    idInput->setPositionY(textInput->getPositionY() - textInput->getContentHeight() - 5.f);
 
-	auto sendBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Send"), this, menu_selector(AIMenu::onSendBtn));
-	this->m_buttonMenu->addChild(sendBtn);
-    sendBtn->setPositionY(textInput->getPositionY() - (textInput->getContentHeight() / 2.f) - 60.f);
+    textInput->setID("kolyah35.gdn/textArea");
+    this->m_buttonMenu->addChild(textInput);
+
+    this->m_buttonMenu->updateLayout();
 }
 
 void AIMenu::keyBackClicked() {
@@ -193,9 +206,8 @@ void AIMenu::selectAreaClicked(cocos2d::CCObject*) {
     auto levelEditorLayer = (LevelEditorLayer*)CCScene::get()->getChildren()->objectAtIndex(0);
     auto editorUI = (EditorUI*)levelEditorLayer->getChildByID("EditorUI");
 
-    auto color = levelEditorLayer->m_levelSettings->m_effectManager->getColorAction(3);
-    color->m_color = { 145, 255, 0 };
-
+    // auto color = levelEditorLayer->m_levelSettings->m_effectManager->getColorAction(3);
+    // color->m_color = { 145, 255, 0 };
 
     if(!m_aiMode){
         m_aiSelectObjects = true;
@@ -388,6 +400,8 @@ void AIMenu::onSendBtn(CCObject*) {
     nlohmann::json blocks = nlohmann::json::array();
     m_selectedRect = GDNGlobal::createOriginRect(GDNGlobal::convertArrayIntoVector<GameObject>(GDNGlobal::selectedObjects));
 
+    nlohmann::json colors;
+
     for(int i = 0; i < objectsInRect->count(); i++) {
         nlohmann::json bdata;
 
@@ -399,21 +413,42 @@ void AIMenu::onSendBtn(CCObject*) {
         bdata["ScaleX"] = object->m_scaleX;
         bdata["ScaleY"] = object->m_scaleY;
         bdata["Rotate"] = object->getRotation();
-        bdata["Z_order"] = object->m_nZOrder;
+        bdata["Z_order"] = object->getObjectZOrder();
         bdata["Z_layer"] = object->getObjectZLayer();
+        bdata["BaseColId"] = (object->m_baseColor != nullptr) ? object->m_baseColor->m_colorID : -1;
+        bdata["DetColId"] = (object->m_detailColor != nullptr) ? object->m_detailColor->m_colorID : -1;
 
-        /* nlohmann::json groups = nlohmann::json::array();
+        std::vector<GJSpriteColor*> c = {
+            object->m_baseColor,
+            object->m_detailColor
+        };
 
-        for(int i = 0; i < object->m_groupCount; i++) {
-            groups.push_back(object->m_groups->at(i));
+        for (GJSpriteColor *col : c) {
+            if (!col) continue;
+
+            auto action = levelEditorLayer->m_levelSettings->m_effectManager->getColorAction(col->m_colorID);
+            nlohmann::json color_obj = nlohmann::json::array();
+            color_obj.push_back(col->m_colorID);
+            if (!action) {
+                color_obj.push_back(255);
+                color_obj.push_back(255);
+                color_obj.push_back(255);
+                color_obj.push_back(0);
+                color_obj.push_back(-1);
+            } else {
+                color_obj.push_back((int)action->m_fromColor.r);
+                color_obj.push_back((int)action->m_fromColor.g);
+                color_obj.push_back((int)action->m_fromColor.b);
+                color_obj.push_back((int)action->m_blending);
+            }
+            colors[std::to_string(col->m_colorID)] = color_obj;
         }
 
-        bdata["Groups"] = groups;
-        */
         blocks.push_back(bdata);
     }
 
     data["Data"] = blocks;
+    data["Colors"] = colors;
 
     std::string buffer = data.dump();
 
@@ -565,7 +600,7 @@ void AIMenu::onHttpCallback(CCHttpClient* client, CCHttpResponse* response) {
             groups.push_back(key);
         }*/
 
-        log::info("generating object string of {}", ID);
+        log::info("generating object string of {} (zlayer={}, zorder={})", ID, zlayer, zorder);
 
         std::string objdata = createStandardObject({x,y}, ID, layer, scaleX, scaleY, colid, rot, groups, zlayer, zorder);
         _gameObjects.push_back(objdata);
